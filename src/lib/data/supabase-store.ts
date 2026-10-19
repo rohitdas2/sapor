@@ -166,6 +166,7 @@ export class SupabaseStore implements SaporStore {
       imageUrl: r.image_path ? this.sb.storage.from("product-images").getPublicUrl(r.image_path).data.publicUrl : null,
       imageIsPlaceholder: !r.image_path,
       emoji: r.emoji,
+      photo: null, // TODO: add photo columns to products when moving off the local catalog
       availability: r.availability,
       sourceUrl: r.source_url,
       lastVerifiedAt: r.last_verified_at,

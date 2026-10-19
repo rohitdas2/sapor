@@ -33,6 +33,18 @@ export function ProductImage({ product, className = "" }: { product: Product; cl
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={product.imageUrl} alt={product.name} className={`object-cover ${className}`} />;
   }
+  if (product.photo) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={product.photo.url}
+        alt={`Representative photo for ${product.name} (not the actual product)`}
+        loading="lazy"
+        className={`object-cover ${className}`}
+        style={{ background: CATEGORY_BG[product.category] }}
+      />
+    );
+  }
   return (
     <div
       className={`relative flex items-center justify-center overflow-hidden ${className}`}
@@ -44,6 +56,18 @@ export function ProductImage({ product, className = "" }: { product: Product; cl
         {product.emoji ?? "🛒"}
       </span>
     </div>
+  );
+}
+
+export function PhotoCredit({ product }: { product: Product }) {
+  if (!product.photo) return null;
+  return (
+    <p className="mt-2 text-[12px] text-ink-soft">
+      Representative photo, not the actual product · {product.photo.credit} ·{" "}
+      <a href={product.photo.source} target="_blank" rel="noopener noreferrer" className="underline">
+        {product.photo.license}, Wikimedia Commons
+      </a>
+    </p>
   );
 }
 

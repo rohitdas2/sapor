@@ -19,7 +19,7 @@ export default function AboutPage() {
         <p className="mt-1">
           The starter catalog is a small, hand-curated list of well-known products with short general descriptions. Sapor
           does not show prices or store stock. &ldquo;Seasonal&rdquo; means a product is generally known to be a seasonal
-          release, not that it&apos;s on shelves now. Product images are emoji illustrations until permitted product photos are added.
+          release, not that it&apos;s on shelves now. Product photos are freely licensed Wikimedia Commons images of the general food type, credited on each product page. They are not photos of the actual products. Where no suitable photo exists, an emoji illustration is shown.
         </p>
       </section>
 

@@ -1,5 +1,5 @@
 {
-  "_note": "Curated starter catalog. Names and short descriptions are general public product knowledge; no prices, stock levels or store availability are claimed. Availability is 'unknown' unless the product is widely known to be a seasonal release. Images are emoji illustrations until permitted product photos are added. lastVerifiedAt is null because nothing here has been checked against the retailer's site.",
+  "_note": "Curated starter catalog. Names and short descriptions are general public product knowledge; no prices, stock levels or store availability are claimed. Availability is 'unknown' unless the product is widely known to be a seasonal release. Images are emoji illustrations until permitted product photos are added. lastVerifiedAt is null because nothing here has been checked against the retailer's site. 'photo' entries are freely licensed Wikimedia Commons images of the general food type (representative, not the actual product), shown with credit and license.",
   "retailer": {
     "id": "trader-joes",
     "name": "Trader Joe's",
@@ -12,7 +12,13 @@
       "category": "frozen-meals",
       "description": "Battered, fried chicken pieces with a sweet-and-tangy mandarin orange sauce packet. Bake or pan-fry, then toss in the sauce.",
       "availability": "unknown",
-      "emoji": "🍊"
+      "emoji": "🍊",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/Flickr_preppybyday_4786746354--Orange_chicken.jpg/960px-Flickr_preppybyday_4786746354--Orange_chicken.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Evan Joshua Swigart (TheCulinaryGeek) from Chicago, Illinois, USA; hometown of A",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Flickr_preppybyday_4786746354--Orange_chicken.jpg"
+      }
     },
     {
       "slug": "chicken-tikka-masala",
@@ -20,7 +26,13 @@
       "category": "frozen-meals",
       "description": "Frozen single-serve meal of chicken in a spiced tomato-cream sauce with cumin-flavored rice.",
       "availability": "unknown",
-      "emoji": "🍛"
+      "emoji": "🍛",
+      "photo": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/4/44/Chicken_Tikka_Masala_KellySue.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "credit": "Kelly Sue",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Chicken_Tikka_Masala_KellySue.JPG"
+      }
     },
     {
       "slug": "cauliflower-gnocchi",
@@ -28,7 +40,13 @@
       "category": "frozen-meals",
       "description": "Frozen gnocchi made primarily from cauliflower. Many fans pan-sear it straight from the bag for crispy edges.",
       "availability": "unknown",
-      "emoji": "🥔"
+      "emoji": "🥔",
+      "photo": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/8/86/Gnocchi_di_ricotta_burro_e_salvia.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "credit": "Paoletta S.",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Gnocchi_di_ricotta_burro_e_salvia.jpg"
+      }
     },
     {
       "slug": "kimbap",
@@ -36,7 +54,13 @@
       "category": "frozen-meals",
       "description": "Frozen Korean seaweed rice rolls filled with vegetables. Microwave and slice.",
       "availability": "unknown",
-      "emoji": "🍙"
+      "emoji": "🍙",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Gimbap_%28pixabay%29.jpg/960px-Gimbap_%28pixabay%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "changupn",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Gimbap_(pixabay).jpg"
+      }
     },
     {
       "slug": "chicken-soup-dumplings",
@@ -44,7 +68,13 @@
       "category": "frozen-meals",
       "description": "Frozen xiao long bao–style dumplings with a brothy chicken filling. Microwave in their tray.",
       "availability": "unknown",
-      "emoji": "🥟"
+      "emoji": "🥟",
+      "photo": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/d/d2/Xiao_Long_Bao_by_Junhao%21.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+        "credit": "Junhao!",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Xiao_Long_Bao_by_Junhao!.jpg"
+      }
     },
     {
       "slug": "japanese-fried-rice",
@@ -52,7 +82,13 @@
       "category": "frozen-meals",
       "description": "Frozen fried rice with vegetables and seasoned egg, ready from the skillet in minutes.",
       "availability": "unknown",
-      "emoji": "🍚"
+      "emoji": "🍚",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Pineapple_fried_rice_at_Banana_Leaf_in_Milpitas%2C_California.jpg/960px-Pineapple_fried_rice_at_Banana_Leaf_in_Milpitas%2C_California.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Grendelkhan",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Pineapple_fried_rice_at_Banana_Leaf_in_Milpitas,_California.jpg"
+      }
     },
     {
       "slug": "everything-but-the-bagel-seasoning",
@@ -60,7 +96,13 @@
       "category": "sauces",
       "description": "A shaker of sesame seeds, dried garlic, dried onion and sea salt — the toppings of an everything bagel, minus the bagel.",
       "availability": "unknown",
-      "emoji": "🥯"
+      "emoji": "🥯",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/90/The_American_Everything_Bagel.jpg/960px-The_American_Everything_Bagel.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "woodleywonderworks",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:The_American_Everything_Bagel.jpg"
+      }
     },
     {
       "slug": "zhoug-sauce",
@@ -68,7 +110,13 @@
       "category": "sauces",
       "description": "A refrigerated cilantro-based hot sauce in the Yemeni style, with chili and spices.",
       "availability": "unknown",
-      "emoji": "🌿"
+      "emoji": "🌿",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Zhug%2C_Skhug.jpg/960px-Zhug%2C_Skhug.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Mushki Brichta",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Zhug,_Skhug.jpg"
+      }
     },
     {
       "slug": "green-goddess-dressing",
@@ -76,7 +124,13 @@
       "category": "sauces",
       "description": "Refrigerated herby, creamy-style dressing that works as a salad dressing or dip.",
       "availability": "unknown",
-      "emoji": "🥗"
+      "emoji": "🥗",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Green_goddess_dressing.jpg/960px-Green_goddess_dressing.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Foodista",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Green_goddess_dressing.jpg"
+      }
     },
     {
       "slug": "chili-onion-crunch",
@@ -84,7 +138,13 @@
       "category": "sauces",
       "description": "Crispy fried onion and garlic in chili oil. A spoonful goes on eggs, noodles, rice — nearly anything.",
       "availability": "unknown",
-      "emoji": "🌶️"
+      "emoji": "🌶️",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Chili_crisp_%28cropped%29.jpg/960px-Chili_crisp_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Valereee",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Chili_crisp_(cropped).jpg"
+      }
     },
     {
       "slug": "speculoos-cookie-butter",
@@ -92,7 +152,13 @@
       "category": "sauces",
       "description": "A spread made from crushed spiced speculoos cookies, with a texture like peanut butter.",
       "availability": "unknown",
-      "emoji": "🍯"
+      "emoji": "🍯",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Speculaaspasta.JPG/960px-Speculaaspasta.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Dinosaur918",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Speculaaspasta.JPG"
+      }
     },
     {
       "slug": "peanut-butter-filled-pretzels",
@@ -116,7 +182,13 @@
       "category": "snacks",
       "description": "Thin, salted chips made from sliced plantains.",
       "availability": "unknown",
-      "emoji": "🍌"
+      "emoji": "🍌",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/PLANTAIN_CHIPS.jpg/960px-PLANTAIN_CHIPS.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "DromoTetteh",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:PLANTAIN_CHIPS.jpg"
+      }
     },
     {
       "slug": "inner-peas",
@@ -124,7 +196,13 @@
       "category": "snacks",
       "description": "Light, crunchy puffed snacks made with peas.",
       "availability": "unknown",
-      "emoji": "🫛"
+      "emoji": "🫛",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/22/Pea_Crackers_%28Taiwan%29.jpg/960px-Pea_Crackers_%28Taiwan%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Ralff Nestor Nacor",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Pea_Crackers_(Taiwan).jpg"
+      }
     },
     {
       "slug": "unexpected-cheddar",
@@ -140,7 +218,13 @@
       "category": "desserts",
       "description": "Dark chocolate cups filled with peanut butter.",
       "availability": "unknown",
-      "emoji": "🍫"
+      "emoji": "🍫",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Chocolate_peanut_butter_cups-3.jpg/960px-Chocolate_peanut_butter_cups-3.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "jules",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Chocolate_peanut_butter_cups-3.jpg"
+      }
     },
     {
       "slug": "joe-joes",
@@ -156,7 +240,13 @@
       "category": "desserts",
       "description": "Frozen bite-size sugar cones filled with ice cream and topped with chocolate.",
       "availability": "unknown",
-      "emoji": "🍦"
+      "emoji": "🍦",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Mini_ice_cream_cone.jpg/960px-Mini_ice_cream_cone.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "ProjectManhattan",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Mini_ice_cream_cone.jpg"
+      }
     },
     {
       "slug": "mochi-ice-cream",
@@ -164,7 +254,13 @@
       "category": "desserts",
       "description": "Frozen balls of ice cream wrapped in soft, chewy mochi.",
       "availability": "unknown",
-      "emoji": "🍡"
+      "emoji": "🍡",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/05/Mochi_Ice_Cream.jpg/960px-Mochi_Ice_Cream.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Charles Nguyen",
+        "license": "Public domain",
+        "source": "https://commons.wikimedia.org/wiki/File:Mochi_Ice_Cream.jpg"
+      }
     },
     {
       "slug": "pumpkin-joe-joes",
@@ -180,7 +276,13 @@
       "category": "desserts",
       "description": "Holiday edition of the sandwich cookie with crushed peppermint candy in the filling.",
       "availability": "seasonal",
-      "emoji": "🍬"
+      "emoji": "🍬",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Peppermint_Sugar_Cookies.jpg/960px-Peppermint_Sugar_Cookies.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "HeatherMarieKosur",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Peppermint_Sugar_Cookies.jpg"
+      }
     },
     {
       "slug": "pumpkin-bread-muffin-mix",
@@ -188,7 +290,13 @@
       "category": "bakery",
       "description": "A fall baking mix for pumpkin bread or muffins. Add pumpkin, eggs and oil.",
       "availability": "seasonal",
-      "emoji": "🧁"
+      "emoji": "🧁",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e1/Pumpkin_bread_2.jpg/960px-Pumpkin_bread_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Shisma",
+        "license": "CC BY 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Pumpkin_bread_2.jpg"
+      }
     },
     {
       "slug": "everything-bagels",
@@ -196,7 +304,13 @@
       "category": "bakery",
       "description": "Bagels topped with sesame, poppy seeds, garlic and onion.",
       "availability": "unknown",
-      "emoji": "🥯"
+      "emoji": "🥯",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/Bagel_Fair_-_November_2023_-_Sarah_Stierch_02.jpg/960px-Bagel_Fair_-_November_2023_-_Sarah_Stierch_02.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Missvain",
+        "license": "CC BY 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Bagel_Fair_-_November_2023_-_Sarah_Stierch_02.jpg"
+      }
     },
     {
       "slug": "chocolate-croissants",
@@ -204,7 +318,13 @@
       "category": "bakery",
       "description": "Frozen pastries you proof overnight and bake in the morning for flaky, chocolate-filled croissants.",
       "availability": "unknown",
-      "emoji": "🥐"
+      "emoji": "🥐",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/Pain_au_chocolat_Luc_Viatour.jpg/960px-Pain_au_chocolat_Luc_Viatour.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Luc Viatour",
+        "license": "CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Pain_au_chocolat_Luc_Viatour.jpg"
+      }
     },
     {
       "slug": "sourdough-loaf",
@@ -212,7 +332,13 @@
       "category": "bakery",
       "description": "A crusty, tangy sourdough bread loaf.",
       "availability": "unknown",
-      "emoji": "🍞"
+      "emoji": "🍞",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Home_made_sour_dough_bread.jpg/960px-Home_made_sour_dough_bread.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Tomascastelazo",
+        "license": "CC BY-SA 4.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Home_made_sour_dough_bread.jpg"
+      }
     },
     {
       "slug": "sparkling-water",
@@ -220,7 +346,13 @@
       "category": "drinks",
       "description": "Unsweetened carbonated water. Several flavors are typically on shelves.",
       "availability": "unknown",
-      "emoji": "🫧"
+      "emoji": "🫧",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/Sparkling_Water_with_Mint_in_Glass_Cup.jpg/960px-Sparkling_Water_with_Mint_in_Glass_Cup.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Tony Webster",
+        "license": "CC BY 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Sparkling_Water_with_Mint_in_Glass_Cup.jpg"
+      }
     },
     {
       "slug": "cold-brew-coffee-concentrate",
@@ -228,7 +360,13 @@
       "category": "drinks",
       "description": "Concentrated cold brew coffee meant to be diluted with water or milk.",
       "availability": "unknown",
-      "emoji": "☕️"
+      "emoji": "☕️",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d2/Maple_Cream_Cold_Brew_-_Trading_Post_Coffee_Roasters_2026-07-16.jpg/960px-Maple_Cream_Cold_Brew_-_Trading_Post_Coffee_Roasters_2026-07-16.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Andy Li",
+        "license": "CC0",
+        "source": "https://commons.wikimedia.org/wiki/File:Maple_Cream_Cold_Brew_-_Trading_Post_Coffee_Roasters_2026-07-16.jpg"
+      }
     },
     {
       "slug": "spiced-cider",
@@ -236,7 +374,13 @@
       "category": "drinks",
       "description": "Apple cider with warm spices, usually released in the colder months.",
       "availability": "seasonal",
-      "emoji": "🍎"
+      "emoji": "🍎",
+      "photo": {
+        "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Hot_Apple_Cider_%2811598921805%29.jpg/960px-Hot_Apple_Cider_%2811598921805%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+        "credit": "Mack Male from Edmonton, AB, Canada",
+        "license": "CC BY-SA 2.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Hot_Apple_Cider_(11598921805).jpg"
+      }
     },
     {
       "slug": "kombucha",

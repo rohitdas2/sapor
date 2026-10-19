@@ -32,6 +32,8 @@ export interface Product {
   imageIsPlaceholder: boolean;
   /** Illustration shown when there's no permitted product photo. */
   emoji: string | null;
+  /** Freely licensed representative photo (not the actual product), with attribution. */
+  photo: { url: string; credit: string; license: string; source: string } | null;
   availability: Availability;
   sourceUrl: string | null;
   lastVerifiedAt: string | null;

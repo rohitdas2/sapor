@@ -12,6 +12,7 @@ import {
   errMsg,
   ErrorState,
   input,
+  PhotoCredit,
   Loading,
   ProductImage,
   ProfileLink,
@@ -50,6 +51,7 @@ export default function ProductPage() {
           </div>
           <h1 className="h-display mt-1 text-3xl font-bold leading-tight">{p.name}</h1>
           <p className="mt-3 leading-relaxed">{p.description}</p>
+          <PhotoCredit product={p} />
           <p className="mt-2 text-xs text-ink-soft">
             {p.availability === "seasonal" && "Usually a seasonal release. "}
             Sapor doesn&apos;t track store stock or prices.
