@@ -17,6 +17,7 @@ export const CATALOG: Product[] = raw.products.map((p) => ({
   imageIsPlaceholder: true,
   emoji: p.emoji ?? null,
   photo: "photo" in p && p.photo ? p.photo : null,
+  instagramUrl: "instagramUrl" in p && typeof p.instagramUrl === "string" ? p.instagramUrl : null,
   availability: p.availability as Product["availability"],
   sourceUrl: null,
   lastVerifiedAt: null,

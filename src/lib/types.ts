@@ -34,6 +34,8 @@ export interface Product {
   emoji: string | null;
   /** Freely licensed representative photo (not the actual product), with attribution. */
   photo: { url: string; credit: string; license: string; source: string } | null;
+  /** Optional official Instagram post to embed (shown via Instagram's embed, never copied). */
+  instagramUrl: string | null;
   availability: Availability;
   sourceUrl: string | null;
   lastVerifiedAt: string | null;

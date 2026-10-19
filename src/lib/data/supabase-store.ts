@@ -48,6 +48,7 @@ interface ProductRow {
   photo_credit: string | null;
   photo_license: string | null;
   photo_source: string | null;
+  instagram_url: string | null;
   availability: Product["availability"];
   source_url: string | null;
   last_verified_at: string | null;
@@ -174,6 +175,7 @@ export class SupabaseStore implements SaporStore {
         r.photo_url && r.photo_license && r.photo_source
           ? { url: r.photo_url, credit: r.photo_credit ?? "Unknown", license: r.photo_license, source: r.photo_source }
           : null,
+      instagramUrl: r.instagram_url,
       availability: r.availability,
       sourceUrl: r.source_url,
       lastVerifiedAt: r.last_verified_at,

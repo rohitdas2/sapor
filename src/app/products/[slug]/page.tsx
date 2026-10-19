@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { InstagramEmbed } from "@/components/InstagramEmbed";
 import { CollectionPicker, QuickTrack } from "@/components/TrackControls";
 import {
   AvailabilityBadge,
@@ -62,6 +63,7 @@ export default function ProductPage() {
 
       {userId ? <MyProductPanel product={p} /> : <SignInPrompt />}
 
+      {p.instagramUrl && <InstagramEmbed url={p.instagramUrl} />}
       <PublicCollections productId={p.id} />
       <CommunityReviews productId={p.id} />
     </div>

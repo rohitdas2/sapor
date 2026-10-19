@@ -60,6 +60,7 @@ create table public.products (
   photo_credit text,
   photo_license text,
   photo_source text,
+  instagram_url text check (instagram_url ~ '^https://www\.instagram\.com/(p|reel)/[A-Za-z0-9_-]+/?$'), -- shown via official embed only
   availability availability_status not null default 'unknown',
   source_url text,
   last_verified_at timestamptz,

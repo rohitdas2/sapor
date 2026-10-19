@@ -60,6 +60,8 @@ supabase/seed.sql             generated catalog seed (node scripts/generate-seed
 
 ## Catalog data
 
+- **Instagram posts:** add `"instagramUrl": "https://www.instagram.com/p/<id>/"` to a product in `src/data/catalog.json`, or set `products.instagram_url` in Supabase. The product page then shows it through Instagram's official embed, so nothing is copied. Only `/p/` and `/reel/` permalinks are accepted. No URLs are filled in yet.
+
 The 30 products use well-known names and short general descriptions. The catalog includes:
 
 - No prices or stock information.
