@@ -8,20 +8,20 @@ export const btn = {
   primary:
     "inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-tomato px-5 font-semibold text-white hover:bg-tomato-dark disabled:opacity-50",
   secondary:
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line bg-paper px-5 font-semibold text-ink hover:bg-crust disabled:opacity-50",
+    "inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink/[0.06] px-5 font-semibold text-ink hover:bg-ink/10 disabled:opacity-50",
   ghost: "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 font-medium text-ink-soft hover:bg-crust",
 };
 
 export const input =
-  "w-full rounded-xl border border-line bg-paper px-4 py-3 text-base text-ink placeholder:text-ink-soft/70 focus:border-saffron";
+  "w-full rounded-xl bg-ink/[0.05] px-4 py-3 text-base text-ink placeholder:text-ink-soft/70 outline-none focus:bg-paper focus:ring-2 focus:ring-tomato/40";
 
-const CATEGORY_STYLE: Record<CategoryId, { bg: string; glyph: string }> = {
-  "frozen-meals": { bg: "linear-gradient(135deg,#dbe9f2,#b9d3e6)", glyph: "❄︎" },
-  snacks: { bg: "linear-gradient(135deg,#fbe3b8,#f3c77c)", glyph: "◐" },
-  desserts: { bg: "linear-gradient(135deg,#f6d6d6,#e9aeb1)", glyph: "✿" },
-  sauces: { bg: "linear-gradient(135deg,#f8d2bf,#e79a76)", glyph: "◉" },
-  bakery: { bg: "linear-gradient(135deg,#f1e0c5,#d9b98a)", glyph: "◠" },
-  drinks: { bg: "linear-gradient(135deg,#d8ecdf,#a9d1b6)", glyph: "◌" },
+const CATEGORY_BG: Record<CategoryId, string> = {
+  "frozen-meals": "linear-gradient(160deg,#eef4f8,#dde9f1)",
+  snacks: "linear-gradient(160deg,#fdf4e3,#f8e6c4)",
+  desserts: "linear-gradient(160deg,#fbeeee,#f4dcdd)",
+  sauces: "linear-gradient(160deg,#fcefe8,#f6dccd)",
+  bakery: "linear-gradient(160deg,#f8f0e4,#efe0c8)",
+  drinks: "linear-gradient(160deg,#eef6f0,#dcece1)",
 };
 
 export function categoryLabel(id: string) {
@@ -33,19 +33,15 @@ export function ProductImage({ product, className = "" }: { product: Product; cl
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={product.imageUrl} alt={product.name} className={`object-cover ${className}`} />;
   }
-  const s = CATEGORY_STYLE[product.category];
   return (
     <div
       className={`relative flex items-center justify-center overflow-hidden ${className}`}
-      style={{ background: s.bg }}
+      style={{ background: CATEGORY_BG[product.category], containerType: "size" }}
       role="img"
-      aria-label={`Placeholder image for ${product.name}`}
+      aria-label={`Illustration of ${product.name}`}
     >
-      <span aria-hidden className="text-5xl text-white/80 drop-shadow-sm">
-        {s.glyph}
-      </span>
-      <span className="absolute bottom-1.5 right-2 rounded bg-white/70 px-1.5 text-[10px] font-medium text-ink-soft">
-        Placeholder image
+      <span aria-hidden className="select-none leading-none drop-shadow-[0_6px_10px_rgba(0,0,0,0.12)]" style={{ fontSize: "min(52cqw, 52cqh)" }}>
+        {product.emoji ?? "🛒"}
       </span>
     </div>
   );
@@ -57,47 +53,6 @@ export function AvailabilityBadge({ product }: { product: Product }) {
   if (product.availability === "discontinued")
     return <span className="rounded-full bg-crust px-2.5 py-0.5 text-xs font-semibold text-ink-soft">Discontinued</span>;
   return null;
-}
-
-export function Stars({ value, size = "text-base" }: { value: number; size?: string }) {
-  const rounded = Math.round(value * 2) / 2;
-  return (
-    <span className={`text-saffron ${size}`} aria-label={`${value.toFixed(1)} out of 5`}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} aria-hidden>
-          {rounded >= i ? "★" : rounded >= i - 0.5 ? "⯪" : "☆"}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-/** 1–5 rating input. Tapping the current value again clears it. */
-export function RatingInput({ value, onChange, label = "Your rating" }: { value: number | null; onChange: (v: number | null) => void; label?: string }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <button
-          key={i}
-          type="button"
-          role="radio"
-          aria-checked={value === i}
-          aria-label={`${i} star${i > 1 ? "s" : ""}`}
-          onClick={() => onChange(value === i ? null : i)}
-          className={`flex h-11 w-11 items-center justify-center rounded-full text-3xl leading-none transition hover:scale-110 ${
-            value != null && i <= value ? "text-saffron" : "text-line"
-          }`}
-        >
-          ★
-        </button>
-      ))}
-      {value != null && (
-        <button type="button" onClick={() => onChange(null)} className="ml-1 text-sm text-ink-soft underline">
-          Clear
-        </button>
-      )}
-    </div>
-  );
 }
 
 export function Loading({ label = "Loading…" }: { label?: string }) {

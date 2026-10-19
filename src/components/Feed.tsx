@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@/lib/data/provider";
-import { EmptyState, ErrorState, Loading, ProductImage, ProfileLink, Stars, timeAgo } from "./ui";
+import { EmptyState, ErrorState, Loading, ProductImage, ProfileLink, timeAgo } from "./ui";
 
 export function Feed({ userId, empty }: { userId?: string; empty: React.ReactNode }) {
   const { data, loading, error } = useQuery((s) => s.feed({ userId, limit: 50 }), [userId]);
@@ -14,7 +14,7 @@ export function Feed({ userId, empty }: { userId?: string; empty: React.ReactNod
     <ol className="space-y-3">
       {data.map((e) =>
         e.kind === "review" ? (
-          <li key={`r-${e.review.id}`} className="rounded-3xl border border-line bg-paper p-4">
+          <li key={`r-${e.review.id}`} className="rounded-3xl card bg-paper p-4">
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span>
                 <ProfileLink profile={e.review.author} /> <span className="text-ink-soft">reviewed</span>
@@ -25,11 +25,6 @@ export function Feed({ userId, empty }: { userId?: string; empty: React.ReactNod
               <ProductImage product={e.product} className="h-12 w-12 shrink-0 rounded-xl" />
               <span className="font-semibold">{e.product.name}</span>
             </Link>
-            {e.review.publicRating != null && (
-              <p className="mt-2">
-                <Stars value={e.review.publicRating} />
-              </p>
-            )}
             {e.review.body && <p className="mt-2 whitespace-pre-line">{e.review.body}</p>}
             {e.review.media.length > 0 && (
               <div className="mt-3 flex gap-2 overflow-x-auto">
@@ -41,7 +36,7 @@ export function Feed({ userId, empty }: { userId?: string; empty: React.ReactNod
             )}
           </li>
         ) : (
-          <li key={`c-${e.collection.id}`} className="rounded-3xl border border-line bg-paper p-4">
+          <li key={`c-${e.collection.id}`} className="rounded-3xl card bg-paper p-4">
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span>
                 <ProfileLink profile={e.collection.owner} /> <span className="text-ink-soft">shared a ranking</span>
@@ -51,7 +46,7 @@ export function Feed({ userId, empty }: { userId?: string; empty: React.ReactNod
             <Link href={`/collections/${e.collection.id}`} className="mt-3 block rounded-2xl bg-cream p-3 hover:bg-crust">
               <span className="h-display text-lg font-semibold">{e.collection.title}</span>
               <ol className="mt-1 space-y-0.5 text-sm">
-                {e.collection.items.slice(0, 3).map((i, idx) => (
+                {e.collection.items.filter((i) => i.position != null).slice(0, 3).map((i, idx) => (
                   <li key={i.productId}>
                     <span className="font-bold text-tomato">{idx + 1}.</span> {i.product.name}
                   </li>

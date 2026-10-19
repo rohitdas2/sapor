@@ -6,7 +6,9 @@ import type {
   ProductFilter,
   Profile,
   PublicReview,
-  RatingStats,
+  CommunityPick,
+  ComparisonResult,
+  OrderEntry,
   Review,
   TrackStatus,
   UserProduct,
@@ -17,8 +19,6 @@ export type StoreMode = "local-demo" | "supabase";
 
 export interface UserProductPatch {
   status?: TrackStatus;
-  rating?: number | null;
-  ratingPublic?: boolean;
   notes?: string | null;
   firstTriedOn?: string | null;
 }
@@ -53,8 +53,7 @@ export interface SaporStore {
   listProducts(filter?: ProductFilter): Promise<Product[]>;
   getProductBySlug(slug: string): Promise<Product | null>;
   newAdditions(limit: number): Promise<Product[]>;
-  communityFavorites(limit: number): Promise<{ product: Product; stats: RatingStats }[]>;
-  ratingStats(productId: string): Promise<RatingStats>;
+  communityFavorites(limit: number): Promise<CommunityPick[]>;
 
   // personal tracking (private)
   myUserProducts(): Promise<UserProduct[]>;
@@ -69,10 +68,18 @@ export interface SaporStore {
   createCollection(input: { title: string; description?: string; visibility: Visibility }): Promise<Collection>;
   updateCollection(id: string, patch: Partial<Pick<Collection, "title" | "description" | "visibility">>): Promise<void>;
   deleteCollection(id: string): Promise<void>;
-  addToCollection(collectionId: string, productId: string): Promise<void>;
+  /**
+   * Adds a product unplaced. If the collection has no placed items yet it
+   * becomes the starting entry at #1. Returns whether it was placed.
+   */
+  addToCollection(collectionId: string, productId: string): Promise<{ placed: boolean }>;
   removeFromCollection(collectionId: string, productId: string): Promise<void>;
-  /** Replace the full order in one atomic write. */
-  reorderCollection(collectionId: string, productIds: string[]): Promise<void>;
+  /**
+   * Save the full confirmed order of placed items (with ties) in one atomic
+   * write. Items in the collection but not in `order` become unplaced.
+   */
+  saveOrder(collectionId: string, order: OrderEntry[]): Promise<void>;
+  recordComparison(input: { collectionId: string; productId: string; otherProductId: string; result: ComparisonResult }): Promise<void>;
   publicCollectionsForProduct(productId: string): Promise<CollectionWithItems[]>;
 
   // reviews
@@ -100,12 +107,5 @@ export function validatePhoto(file: File) {
   }
   if (file.size > MAX_PHOTO_BYTES) {
     throw new StoreError("Each photo must be under 8 MB.");
-  }
-}
-
-export function validateRating(rating: number | null | undefined) {
-  if (rating == null) return;
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    throw new StoreError("Ratings are whole numbers from 1 to 5.");
   }
 }

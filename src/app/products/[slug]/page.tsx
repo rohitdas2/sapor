@@ -15,8 +15,6 @@ import {
   Loading,
   ProductImage,
   ProfileLink,
-  RatingInput,
-  Stars,
   timeAgo,
   useToast,
 } from "@/components/ui";
@@ -44,14 +42,13 @@ export default function ProductPage() {
       <Link href="/" className="text-sm font-semibold text-ink-soft hover:underline">
         ← Discover
       </Link>
-      <div className="mt-3 overflow-hidden rounded-3xl border border-line bg-paper">
+      <div className="mt-3 overflow-hidden rounded-3xl card bg-paper">
         <ProductImage product={p} className="aspect-[16/10] w-full" />
         <div className="p-5">
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">
             Trader Joe&apos;s · {categoryLabel(p.category)} <AvailabilityBadge product={p} />
           </div>
           <h1 className="h-display mt-1 text-3xl font-bold leading-tight">{p.name}</h1>
-          <CommunityRating productId={p.id} />
           <p className="mt-3 leading-relaxed">{p.description}</p>
           <p className="mt-2 text-xs text-ink-soft">
             {p.availability === "seasonal" && "Usually a seasonal release. "}
@@ -66,20 +63,6 @@ export default function ProductPage() {
       <PublicCollections productId={p.id} />
       <CommunityReviews productId={p.id} />
     </div>
-  );
-}
-
-function CommunityRating({ productId }: { productId: string }) {
-  const { data } = useQuery((s) => s.ratingStats(productId), [productId]);
-  if (!data) return null;
-  if (data.count === 0) return <p className="mt-2 text-sm text-ink-soft">No shared ratings yet.</p>;
-  return (
-    <p className="mt-2 flex items-center gap-2 text-sm">
-      <Stars value={data.average!} /> <strong>{data.average!.toFixed(1)}</strong>
-      <span className="text-ink-soft">
-        from {data.count} shared rating{data.count === 1 ? "" : "s"}
-      </span>
-    </p>
   );
 }
 
@@ -117,7 +100,7 @@ function MyProductPanel({ product }: { product: Product }) {
 
   if (loading && up === undefined) return <Loading />;
   return (
-    <section className="mt-5 rounded-3xl border border-line bg-paper p-5" aria-labelledby="mine-h">
+    <section className="mt-5 rounded-3xl card bg-paper p-5" aria-labelledby="mine-h">
       <h2 id="mine-h" className="h-display text-xl font-semibold">
         Your take
       </h2>
@@ -127,19 +110,6 @@ function MyProductPanel({ product }: { product: Product }) {
 
       {up?.status === "tried" && (
         <div className="mt-5 space-y-5">
-          <div>
-            <p className="mb-1 text-sm font-semibold">Your rating</p>
-            <RatingInput value={up.rating} onChange={(rating) => patch({ rating })} />
-            <label className="mt-2 flex items-center gap-2 text-sm text-ink-soft">
-              <input
-                type="checkbox"
-                className="h-5 w-5 accent-basil"
-                checked={up.ratingPublic}
-                onChange={(e) => patch({ ratingPublic: e.target.checked }, e.target.checked ? "Rating shared" : "Rating is private")}
-              />
-              Share my rating publicly (counts toward the community average)
-            </label>
-          </div>
           <div>
             <label htmlFor="notes" className="mb-1 block text-sm font-semibold">
               Private notes <span className="font-normal text-ink-soft">— only you can see these</span>
@@ -160,8 +130,9 @@ function MyProductPanel({ product }: { product: Product }) {
 
       {up && (
         <div className="mt-6">
-          <h3 className="mb-2 text-sm font-semibold">Rankings</h3>
-          <CollectionPicker productId={product.id} />
+          <h3 className="mb-2 text-sm font-semibold">Your rankings</h3>
+          <p className="mb-2 text-sm text-ink-soft">Add it to a ranking and we&apos;ll help you place it with a few quick comparisons.</p>
+          <CollectionPicker product={product} />
         </div>
       )}
 
@@ -324,7 +295,7 @@ function PublicCollections({ productId }: { productId: string }) {
           const pos = c.items.findIndex((i) => i.productId === productId) + 1;
           return (
             <li key={c.id}>
-              <Link href={`/collections/${c.id}`} className="flex items-center justify-between rounded-2xl border border-line bg-paper px-4 py-3 hover:bg-crust">
+              <Link href={`/collections/${c.id}`} className="flex items-center justify-between rounded-2xl card bg-paper px-4 py-3 hover:bg-crust">
                 <span>
                   <span className="font-semibold">{c.title}</span>
                   <span className="block text-sm text-ink-soft">by {c.owner.displayName}</span>
@@ -356,16 +327,11 @@ function CommunityReviews({ productId }: { productId: string }) {
       ) : (
         <ul className="mt-3 space-y-3">
           {data.map((r) => (
-            <li key={r.id} className="rounded-3xl border border-line bg-paper p-4">
+            <li key={r.id} className="rounded-3xl card bg-paper p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <ProfileLink profile={r.author} />
                 <span className="text-xs text-ink-soft">{timeAgo(r.updatedAt)}</span>
               </div>
-              {r.publicRating != null && (
-                <p className="mt-2">
-                  <Stars value={r.publicRating} />
-                </p>
-              )}
               {r.body && <p className="mt-2 whitespace-pre-line">{r.body}</p>}
               {r.media.length > 0 && (
                 <div className="mt-3 flex gap-2 overflow-x-auto">

@@ -9,7 +9,9 @@ import type {
   ProductFilter,
   Profile,
   PublicReview,
-  RatingStats,
+  CommunityPick,
+  ComparisonResult,
+  OrderEntry,
   Review,
   TrackStatus,
   UserProduct,
@@ -22,7 +24,6 @@ import {
   StoreError,
   type UserProductPatch,
   validatePhoto,
-  validateRating,
 } from "./store";
 
 /**
@@ -42,6 +43,7 @@ interface ProductRow {
   category: Product["category"];
   description: string;
   image_path: string | null;
+  emoji: string | null;
   availability: Product["availability"];
   source_url: string | null;
   last_verified_at: string | null;
@@ -61,8 +63,6 @@ interface UserProductRow {
   user_id: string;
   product_id: string;
   status: TrackStatus;
-  rating: number | null;
-  rating_public: boolean;
   notes: string | null;
   first_tried_on: string | null;
   created_at: string;
@@ -79,7 +79,7 @@ interface CollectionRow {
 }
 interface CollectionJoinedRow extends CollectionRow {
   owner: ProfileRow;
-  collection_items: { product_id: string; position: number; added_at: string; product: ProductRow }[];
+  collection_items: { product_id: string; position: number | null; tied_with_prev: boolean; added_at: string; product: ProductRow }[];
 }
 interface MediaRow {
   id: string;
@@ -105,7 +105,7 @@ interface ReviewJoinedRow extends ReviewRow {
 
 // Disambiguate: profiles <-> collections has two FKs (owner_id, pinned_collection_id).
 const COLLECTION_SELECT =
-  "*, owner:profiles!collections_owner_id_fkey(*), collection_items(product_id, position, added_at, product:products(*))";
+  "*, owner:profiles!collections_owner_id_fkey(*), collection_items(product_id, position, tied_with_prev, added_at, product:products(*))";
 const REVIEW_SELECT = "*, review_media(*), author:profiles(*)";
 
 function fail(error: { message: string } | null): asserts error is null {
@@ -165,6 +165,7 @@ export class SupabaseStore implements SaporStore {
       description: r.description,
       imageUrl: r.image_path ? this.sb.storage.from("product-images").getPublicUrl(r.image_path).data.publicUrl : null,
       imageIsPlaceholder: !r.image_path,
+      emoji: r.emoji,
       availability: r.availability,
       sourceUrl: r.source_url,
       lastVerifiedAt: r.last_verified_at,
@@ -190,8 +191,6 @@ export class SupabaseStore implements SaporStore {
       userId: r.user_id,
       productId: r.product_id,
       status: r.status,
-      rating: r.rating,
-      ratingPublic: r.rating_public,
       notes: r.notes,
       firstTriedOn: r.first_tried_on,
       createdAt: r.created_at,
@@ -216,11 +215,12 @@ export class SupabaseStore implements SaporStore {
       ...this.collectionBase(r),
       owner: this.profile(r.owner),
       items: [...r.collection_items]
-        .sort((a, b) => a.position - b.position)
+        .sort((a, b) => (a.position ?? Infinity) - (b.position ?? Infinity) || a.added_at.localeCompare(b.added_at))
         .map((i) => ({
           collectionId: r.id,
           productId: i.product_id,
           position: i.position,
+          tiedWithPrev: i.tied_with_prev,
           addedAt: i.added_at,
           product: this.product(i.product),
         })),
@@ -248,22 +248,8 @@ export class SupabaseStore implements SaporStore {
     };
   }
 
-  /** Attach each author's rating, only where they chose to share it. */
-  private async withPublicRatings(rows: ReviewJoinedRow[]): Promise<PublicReview[]> {
-    if (!rows.length) return [];
-    const { data, error } = await this.sb
-      .from("public_ratings")
-      .select("user_id, product_id, rating")
-      .in("user_id", [...new Set(rows.map((r) => r.author_id))])
-      .in("product_id", [...new Set(rows.map((r) => r.product_id))]);
-    fail(error);
-    const key = (u: string, p: string) => `${u}:${p}`;
-    const ratings = new Map((data ?? []).map((r) => [key(r.user_id, r.product_id), r.rating as number]));
-    return rows.map((r) => ({
-      ...this.review(r),
-      author: this.profile(r.author),
-      publicRating: ratings.get(key(r.author_id, r.product_id)) ?? null,
-    }));
+  private publicReviews(rows: ReviewJoinedRow[]): PublicReview[] {
+    return rows.map((r) => ({ ...this.review(r), author: this.profile(r.author) }));
   }
 
   // ---------- auth ----------
@@ -322,32 +308,22 @@ export class SupabaseStore implements SaporStore {
     return (data as ProductRow[]).map((r) => this.product(r));
   }
 
-  async ratingStats(productId: string): Promise<RatingStats> {
-    const { data, error } = await this.sb.from("product_rating_stats").select("*").eq("product_id", productId).maybeSingle();
-    fail(error);
-    return data ? { count: data.rating_count, average: Number(data.rating_avg) } : { count: 0, average: null };
-  }
-
-  async communityFavorites(limit: number) {
-    const { data: stats, error } = await this.sb
-      .from("product_rating_stats")
+  async communityFavorites(limit: number): Promise<CommunityPick[]> {
+    const { data: picks, error } = await this.sb
+      .from("community_top_picks")
       .select("*")
-      .gte("rating_count", 2)
-      .gte("rating_avg", 4)
-      .order("rating_avg", { ascending: false })
-      .order("rating_count", { ascending: false })
+      .gte("top_three_count", 2)
+      .order("top_three_count", { ascending: false })
       .limit(limit);
     fail(error);
-    if (!stats?.length) return [];
+    if (!picks?.length) return [];
     const { data: products, error: pErr } = await this.sb
       .from("products")
       .select("*")
-      .in("id", stats.map((s) => s.product_id));
+      .in("id", picks.map((p) => p.product_id));
     fail(pErr);
     const byId = new Map((products as ProductRow[]).map((p) => [p.id, this.product(p)]));
-    return stats
-      .filter((s) => byId.has(s.product_id))
-      .map((s) => ({ product: byId.get(s.product_id)!, stats: { count: s.rating_count, average: Number(s.rating_avg) } }));
+    return picks.filter((p) => byId.has(p.product_id)).map((p) => ({ product: byId.get(p.product_id)!, topThreeCount: p.top_three_count }));
   }
 
   // ---------- tracking ----------
@@ -376,7 +352,6 @@ export class SupabaseStore implements SaporStore {
 
   async updateUserProduct(productId: string, patch: UserProductPatch) {
     const me = this.requireUser();
-    validateRating(patch.rating);
     const existing = await this.myUserProduct(productId);
     const status = patch.status ?? existing?.status ?? "want_to_try";
     const today = new Date().toISOString().slice(0, 10);
@@ -384,8 +359,6 @@ export class SupabaseStore implements SaporStore {
       user_id: me,
       product_id: productId,
       status,
-      rating: patch.rating !== undefined ? patch.rating : (existing?.rating ?? null),
-      rating_public: patch.ratingPublic ?? existing?.ratingPublic ?? false,
       notes: patch.notes !== undefined ? patch.notes : (existing?.notes ?? null),
       first_tried_on:
         patch.firstTriedOn !== undefined ? patch.firstTriedOn : (existing?.firstTriedOn ?? (status === "tried" ? today : null)),
@@ -461,9 +434,10 @@ export class SupabaseStore implements SaporStore {
 
   async addToCollection(collectionId: string, productId: string) {
     this.requireUser();
-    const { error } = await this.sb.rpc("add_to_collection", { p_collection_id: collectionId, p_product_id: productId });
+    const { data, error } = await this.sb.rpc("add_to_collection", { p_collection_id: collectionId, p_product_id: productId });
     fail(error);
     this.emit();
+    return { placed: data === true };
   }
 
   async removeFromCollection(collectionId: string, productId: string) {
@@ -473,11 +447,26 @@ export class SupabaseStore implements SaporStore {
     this.emit();
   }
 
-  async reorderCollection(collectionId: string, productIds: string[]) {
+  async saveOrder(collectionId: string, order: OrderEntry[]) {
     this.requireUser();
-    const { error } = await this.sb.rpc("reorder_collection", { p_collection_id: collectionId, p_product_ids: productIds });
+    const { error } = await this.sb.rpc("save_collection_order", {
+      p_collection_id: collectionId,
+      p_order: order.map((e) => ({ product_id: e.productId, tied_with_prev: e.tiedWithPrev })),
+    });
     if (error) throw new StoreError("Couldn't save that order. Refresh and try again.");
     this.emit();
+  }
+
+  async recordComparison(input: { collectionId: string; productId: string; otherProductId: string; result: ComparisonResult }) {
+    const me = this.requireUser();
+    const { error } = await this.sb.from("comparisons").insert({
+      user_id: me,
+      collection_id: input.collectionId,
+      product_id: input.productId,
+      other_product_id: input.otherProductId,
+      result: input.result,
+    });
+    fail(error);
   }
 
   async publicCollectionsForProduct(productId: string) {
@@ -592,7 +581,7 @@ export class SupabaseStore implements SaporStore {
       .eq("visibility", "public")
       .order("created_at", { ascending: false });
     fail(error);
-    return this.withPublicRatings(data as unknown as ReviewJoinedRow[]);
+    return this.publicReviews(data as unknown as ReviewJoinedRow[]);
   }
 
   // ---------- profiles + feed ----------
@@ -642,7 +631,7 @@ export class SupabaseStore implements SaporStore {
     fail(collections.error);
 
     const reviewRows = reviews.data as unknown as ReviewJoinedRow[];
-    const publicReviews = await this.withPublicRatings(reviewRows);
+    const publicReviews = this.publicReviews(reviewRows);
     const entries: FeedEntry[] = publicReviews.map((r, i) => ({
       kind: "review",
       at: r.updatedAt,
@@ -651,7 +640,7 @@ export class SupabaseStore implements SaporStore {
     }));
     for (const row of collections.data as unknown as CollectionJoinedRow[]) {
       const c = this.collection(row);
-      if (c.items.length) entries.push({ kind: "collection", at: c.updatedAt, collection: c });
+      if (c.items.some((i) => i.position != null)) entries.push({ kind: "collection", at: c.updatedAt, collection: c });
     }
     return entries.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
   }

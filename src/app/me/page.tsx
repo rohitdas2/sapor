@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
-import { btn, categoryLabel, EmptyState, errMsg, ErrorState, input, Loading, ProductImage, Stars, useToast } from "@/components/ui";
+import { btn, categoryLabel, EmptyState, errMsg, ErrorState, input, Loading, ProductImage, useToast } from "@/components/ui";
 import { useQuery, useStore } from "@/lib/data/provider";
 import { CATEGORIES, type CategoryId, type Visibility } from "@/lib/types";
 
@@ -61,7 +61,7 @@ function TrackedList({ status }: { status: "tried" | "want_to_try" }) {
   const productById = useMemo(() => new Map((catalog.data ?? []).map((p) => [p.id, p])), [catalog.data]);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<CategoryId | "">("");
-  const [sort, setSort] = useState<"recent" | "rating" | "name">("recent");
+  const [sort, setSort] = useState<"recent" | "name">("recent");
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -72,9 +72,7 @@ function TrackedList({ status }: { status: "tried" | "want_to_try" }) {
       .sort((a, b) =>
         sort === "name"
           ? a.product.name.localeCompare(b.product.name)
-          : sort === "rating"
-            ? (b.up.rating ?? 0) - (a.up.rating ?? 0)
-            : b.up.updatedAt.localeCompare(a.up.updatedAt),
+          : b.up.updatedAt.localeCompare(a.up.updatedAt),
       );
   }, [data, productById, status, q, category, sort]);
 
@@ -89,7 +87,7 @@ function TrackedList({ status }: { status: "tried" | "want_to_try" }) {
         action={<Link href="/" className={btn.primary}>Find something to try</Link>}
       >
         {status === "tried"
-          ? "Tap “Tried” on any product. Ratings, notes and rankings are optional."
+          ? "Tap “Tried” on any product. Notes, photos and rankings are optional."
           : "Tap “Want to try” on anything that catches your eye so you remember it next shop."}
       </EmptyState>
     );
@@ -118,7 +116,6 @@ function TrackedList({ status }: { status: "tried" | "want_to_try" }) {
           </label>
           <select id="my-sort" className={`${input} sm:w-36`} value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
             <option value="recent">Recent</option>
-            {status === "tried" && <option value="rating">Rating</option>}
             <option value="name">A–Z</option>
           </select>
         </div>
@@ -129,14 +126,13 @@ function TrackedList({ status }: { status: "tried" | "want_to_try" }) {
         <ul className="mt-4 space-y-2">
           {rows.map(({ up, product }) => (
             <li key={product.id}>
-              <Link href={`/products/${product.slug}`} className="flex items-center gap-3 rounded-2xl border border-line bg-paper p-2 pr-4 hover:bg-crust">
+              <Link href={`/products/${product.slug}`} className="flex items-center gap-3 rounded-2xl card bg-paper p-2 pr-4 hover:bg-crust">
                 <ProductImage product={product} className="h-16 w-16 shrink-0 rounded-xl" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{product.name}</span>
                   <span className="text-sm text-ink-soft">{categoryLabel(product.category)}</span>
                   {up.notes && <span className="block truncate text-xs text-ink-soft">🔒 {up.notes}</span>}
                 </span>
-                {up.rating != null ? <Stars value={up.rating} size="text-sm" /> : status === "tried" && <span className="text-xs text-ink-soft">Not rated</span>}
               </Link>
             </li>
           ))}
@@ -170,7 +166,7 @@ function Rankings() {
   return (
     <div>
       {creating ? (
-        <form onSubmit={create} className="mb-5 space-y-3 rounded-3xl border border-line bg-paper p-4">
+        <form onSubmit={create} className="mb-5 space-y-3 rounded-3xl card bg-paper p-4">
           <label htmlFor="col-title" className="block text-sm font-semibold">
             Name your ranking
           </label>
@@ -202,7 +198,7 @@ function Rankings() {
         <ul className="grid gap-3 sm:grid-cols-2">
           {data.map((c) => (
             <li key={c.id}>
-              <Link href={`/collections/${c.id}`} className="block rounded-3xl border border-line bg-paper p-4 hover:bg-crust">
+              <Link href={`/collections/${c.id}`} className="block rounded-3xl card bg-paper p-4 hover:bg-crust">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="h-display text-lg font-semibold">{c.title}</h3>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${c.visibility === "public" ? "bg-basil-soft text-basil" : "bg-crust text-ink-soft"}`}>
@@ -210,11 +206,14 @@ function Rankings() {
                   </span>
                 </div>
                 <ol className="mt-2 space-y-0.5 text-sm text-ink-soft">
-                  {c.items.slice(0, 3).map((i, idx) => (
+                  {c.items.filter((i) => i.position != null).slice(0, 3).map((i, idx) => (
                     <li key={i.productId} className="truncate">
                       <span className="font-bold text-tomato">{idx + 1}.</span> {i.product.name}
                     </li>
                   ))}
+                  {c.items.some((i) => i.position == null) && (
+                    <li className="font-medium text-saffron">{c.items.filter((i) => i.position == null).length} waiting to be placed</li>
+                  )}
                   {c.items.length === 0 && <li>Empty — add products from any product page.</li>}
                   {c.items.length > 3 && <li>+{c.items.length - 3} more</li>}
                 </ol>

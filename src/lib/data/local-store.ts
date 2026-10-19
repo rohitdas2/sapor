@@ -1,6 +1,11 @@
 "use client";
 
+import { fromGroups, rankNumbers, toGroups } from "../ranking";
 import type {
+  CommunityPick,
+  Comparison,
+  ComparisonResult,
+  OrderEntry,
   Collection,
   CollectionItem,
   CollectionWithItems,
@@ -8,7 +13,6 @@ import type {
   Product,
   Profile,
   PublicReview,
-  RatingStats,
   Review,
   ReviewMedia,
   UserProduct,
@@ -21,7 +25,6 @@ import {
   StoreError,
   type UserProductPatch,
   validatePhoto,
-  validateRating,
 } from "./store";
 
 /**
@@ -30,7 +33,7 @@ import {
  * but it is NOT a security boundary: anyone with the browser can read the raw data.
  */
 
-const KEY = "sapor:local-demo:v1";
+const KEY = "sapor:local-demo:v2"; // v2: guided rankings replace numeric ratings
 
 interface LocalUser extends Profile {
   email: string;
@@ -43,6 +46,7 @@ interface DB {
   collectionItems: CollectionItem[];
   reviews: Omit<Review, "media">[];
   reviewMedia: ReviewMedia[];
+  comparisons: Comparison[];
   sessionUserId: string | null;
 }
 
@@ -53,6 +57,7 @@ const empty = (): DB => ({
   collectionItems: [],
   reviews: [],
   reviewMedia: [],
+  comparisons: [],
   sessionUserId: null,
 });
 
@@ -171,31 +176,22 @@ export class LocalStore implements SaporStore {
     return [...CATALOG].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
   }
 
-  private publicRatings(productId?: string) {
-    return this.db.userProducts.filter(
-      (up) => up.ratingPublic && up.rating != null && up.status === "tried" && (!productId || up.productId === productId),
-    );
-  }
-
-  async ratingStats(productId: string): Promise<RatingStats> {
-    const rows = this.publicRatings(productId);
-    if (!rows.length) return { count: 0, average: null };
-    return { count: rows.length, average: rows.reduce((s, r) => s + (r.rating ?? 0), 0) / rows.length };
-  }
-
-  async communityFavorites(limit: number) {
-    const groups = new Map<string, number[]>();
-    for (const r of this.publicRatings()) {
-      groups.set(r.productId, [...(groups.get(r.productId) ?? []), r.rating!]);
+  /** Products people put in the top 3 of their public rankings. Only real activity counts. */
+  async communityFavorites(limit: number): Promise<CommunityPick[]> {
+    const owners = new Map<string, Set<string>>();
+    for (const c of this.db.collections) {
+      if (c.visibility !== "public") continue;
+      const placed = this.placedOrder(this.db, c.id);
+      const ranks = rankNumbers(placed);
+      placed.forEach((e, i) => {
+        if (ranks[i] > 3) return;
+        owners.set(e.productId, (owners.get(e.productId) ?? new Set()).add(c.ownerId));
+      });
     }
-    return [...groups.entries()]
-      .filter(([, rs]) => rs.length >= 2)
-      .map(([pid, rs]) => ({
-        product: byProductId.get(pid)!,
-        stats: { count: rs.length, average: rs.reduce((a, b) => a + b, 0) / rs.length },
-      }))
-      .filter((x) => x.product && (x.stats.average ?? 0) >= 4)
-      .sort((a, b) => b.stats.average! - a.stats.average! || b.stats.count - a.stats.count)
+    return [...owners.entries()]
+      .filter(([pid, o]) => o.size >= 2 && byProductId.has(pid))
+      .map(([pid, o]) => ({ product: byProductId.get(pid)!, topThreeCount: o.size }))
+      .sort((a, b) => b.topThreeCount - a.topThreeCount || a.product.name.localeCompare(b.product.name))
       .slice(0, limit);
   }
 
@@ -217,7 +213,6 @@ export class LocalStore implements SaporStore {
   async updateUserProduct(productId: string, patch: UserProductPatch) {
     const me = this.requireUser();
     if (!byProductId.has(productId)) throw new StoreError("Unknown product.");
-    validateRating(patch.rating);
     let result!: UserProduct;
     this.commit((db) => {
       const existing = db.userProducts.find((u) => u.userId === me && u.productId === productId);
@@ -231,8 +226,6 @@ export class LocalStore implements SaporStore {
           userId: me,
           productId,
           status: patch.status ?? "want_to_try",
-          rating: patch.rating ?? null,
-          ratingPublic: patch.ratingPublic ?? false,
           notes: patch.notes ?? null,
           firstTriedOn: patch.firstTriedOn ?? (patch.status === "tried" ? t.slice(0, 10) : null),
           createdAt: t,
@@ -262,7 +255,7 @@ export class LocalStore implements SaporStore {
       owner: this.profileOf(c.ownerId)!,
       items: this.db.collectionItems
         .filter((i) => i.collectionId === c.id)
-        .sort((a, b) => a.position - b.position)
+        .sort((a, b) => (a.position ?? Infinity) - (b.position ?? Infinity) || a.addedAt.localeCompare(b.addedAt))
         .map((i) => ({ ...i, product: byProductId.get(i.productId)! }))
         .filter((i) => i.product),
     };
@@ -331,42 +324,72 @@ export class LocalStore implements SaporStore {
     });
   }
 
+  private placedOrder(db: DB, collectionId: string): OrderEntry[] {
+    return db.collectionItems
+      .filter((i) => i.collectionId === collectionId && i.position != null)
+      .sort((a, b) => a.position! - b.position!)
+      .map((i) => ({ productId: i.productId, tiedWithPrev: i.tiedWithPrev }));
+  }
+
+  /** Write a full placed order; anything else in the collection becomes unplaced. */
+  private writeOrder(db: DB, collectionId: string, order: OrderEntry[]) {
+    const items = db.collectionItems.filter((i) => i.collectionId === collectionId);
+    for (const i of items) {
+      i.position = null;
+      i.tiedWithPrev = false;
+    }
+    order.forEach((e, idx) => {
+      const item = items.find((i) => i.productId === e.productId)!;
+      item.position = idx;
+      item.tiedWithPrev = idx > 0 && e.tiedWithPrev;
+    });
+  }
+
   async addToCollection(collectionId: string, productId: string) {
     if (!byProductId.has(productId)) throw new StoreError("Unknown product.");
+    let placed = false;
     this.commit((db) => {
       const c = this.ownCollection(db, collectionId);
-      const items = db.collectionItems.filter((i) => i.collectionId === collectionId);
-      if (items.some((i) => i.productId === productId)) return; // no duplicates
-      const position = items.length ? Math.max(...items.map((i) => i.position)) + 1 : 0;
-      db.collectionItems.push({ collectionId, productId, position, addedAt: now() });
+      if (db.collectionItems.some((i) => i.collectionId === collectionId && i.productId === productId)) {
+        placed = db.collectionItems.find((i) => i.collectionId === collectionId && i.productId === productId)!.position != null;
+        return; // no duplicates
+      }
+      // The first item in an empty ranking is its starting entry; others start unplaced.
+      placed = this.placedOrder(db, collectionId).length === 0;
+      db.collectionItems.push({ collectionId, productId, position: placed ? 0 : null, tiedWithPrev: false, addedAt: now() });
       c.updatedAt = now();
     });
+    return { placed };
   }
 
   async removeFromCollection(collectionId: string, productId: string) {
     this.commit((db) => {
       const c = this.ownCollection(db, collectionId);
+      const groups = toGroups(this.placedOrder(db, collectionId)).map((g) => g.filter((p) => p !== productId)).filter((g) => g.length);
       db.collectionItems = db.collectionItems.filter((i) => !(i.collectionId === collectionId && i.productId === productId));
-      db.collectionItems
-        .filter((i) => i.collectionId === collectionId)
-        .sort((a, b) => a.position - b.position)
-        .forEach((i, idx) => (i.position = idx));
+      this.writeOrder(db, collectionId, fromGroups(groups));
       c.updatedAt = now();
     });
   }
 
-  async reorderCollection(collectionId: string, productIds: string[]) {
+  async saveOrder(collectionId: string, order: OrderEntry[]) {
     this.commit((db) => {
       const c = this.ownCollection(db, collectionId);
-      const items = db.collectionItems.filter((i) => i.collectionId === collectionId);
-      const current = new Set(items.map((i) => i.productId));
-      if (productIds.length !== items.length || new Set(productIds).size !== productIds.length || !productIds.every((p) => current.has(p))) {
+      const ids = new Set(db.collectionItems.filter((i) => i.collectionId === collectionId).map((i) => i.productId));
+      const seen = new Set(order.map((e) => e.productId));
+      if (seen.size !== order.length || !order.every((e) => ids.has(e.productId))) {
         throw new StoreError("That order doesn't match the collection. Refresh and try again.");
       }
-      productIds.forEach((pid, idx) => {
-        items.find((i) => i.productId === pid)!.position = idx;
-      });
+      this.writeOrder(db, collectionId, order);
       c.updatedAt = now();
+    });
+  }
+
+  async recordComparison(input: { collectionId: string; productId: string; otherProductId: string; result: ComparisonResult }) {
+    const me = this.requireUser();
+    this.commit((db) => {
+      this.ownCollection(db, input.collectionId);
+      db.comparisons.push({ id: uid(), userId: me, ...input, createdAt: now() });
     });
   }
 
@@ -394,12 +417,7 @@ export class LocalStore implements SaporStore {
   }
 
   private toPublic(r: Omit<Review, "media">): PublicReview {
-    const up = this.db.userProducts.find((u) => u.userId === r.authorId && u.productId === r.productId);
-    return {
-      ...this.withMedia(r),
-      author: this.profileOf(r.authorId)!,
-      publicRating: up?.ratingPublic ? up.rating : null,
-    };
+    return { ...this.withMedia(r), author: this.profileOf(r.authorId)! };
   }
 
   async myReview(productId: string) {
@@ -495,7 +513,7 @@ export class LocalStore implements SaporStore {
     for (const c of this.db.collections) {
       if (c.visibility !== "public" || (userId && c.ownerId !== userId)) continue;
       const hydrated = this.hydrate(c);
-      if (!hydrated.items.length) continue;
+      if (!hydrated.items.some((i) => i.position != null)) continue;
       entries.push({ kind: "collection", at: c.updatedAt, collection: hydrated });
     }
     return entries.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
@@ -516,8 +534,8 @@ export class LocalStore implements SaporStore {
     const a = mk("Demo · Juniper", "Sample account. Frozen-aisle optimist.");
     const b = mk("Demo · Marco", "Sample account. Sauce first, questions later.");
     const c = mk("Demo · Priya", "Sample account. Will rank any dessert.");
-    const rate = (u: LocalUser, slug: string, rating: number, ago: number): UserProduct => ({
-      userId: u.id, productId: `p-${slug}`, status: "tried", rating, ratingPublic: true,
+    const tried = (u: LocalUser, slug: string, ago: number): UserProduct => ({
+      userId: u.id, productId: `p-${slug}`, status: "tried",
       notes: "Demo note — private, never shown to others.", firstTriedOn: t(ago).slice(0, 10), createdAt: t(ago), updatedAt: t(ago),
     });
     const rv = (u: LocalUser, slug: string, body: string, ago: number) => ({
@@ -527,7 +545,7 @@ export class LocalStore implements SaporStore {
       const id = uid();
       return {
         c: { id, ownerId: u.id, title, description: "Demo collection (sample data).", visibility: "public" as const, createdAt: t(ago), updatedAt: t(ago) },
-        items: slugs.map((s, i) => ({ collectionId: id, productId: `p-${s}`, position: i, addedAt: t(ago) })),
+        items: slugs.map((s, i) => ({ collectionId: id, productId: `p-${s}`, position: i, tiedWithPrev: false, addedAt: t(ago) })),
       };
     };
     const cols = [
@@ -535,15 +553,16 @@ export class LocalStore implements SaporStore {
       col(b, "Sauces worth the fridge space", ["chili-onion-crunch", "zhoug-sauce", "green-goddess-dressing"], 5),
       col(c, "Desserts, ranked", ["hold-the-cone", "dark-chocolate-peanut-butter-cups", "mochi-ice-cream", "joe-joes"], 1),
     ];
+    // A second public ranking so community favorites reflect more than one person.
+    cols.push(col(b, "Weeknight freezer staples", ["chicken-soup-dumplings", "mandarin-orange-chicken", "japanese-fried-rice"], 4));
+    const users = new Map([a, b, c].map((u) => [u.id, u]));
     a.pinnedCollectionId = cols[0].c.id;
     c.pinnedCollectionId = cols[2].c.id;
     this.commit((db) => {
       db.users.push(a, b, c);
       db.userProducts.push(
-        rate(a, "mandarin-orange-chicken", 5, 6), rate(b, "mandarin-orange-chicken", 4, 7), rate(c, "mandarin-orange-chicken", 4, 4),
-        rate(b, "chili-onion-crunch", 5, 5), rate(a, "chili-onion-crunch", 5, 9),
-        rate(c, "hold-the-cone", 5, 2), rate(a, "hold-the-cone", 4, 8),
-        rate(a, "cauliflower-gnocchi", 3, 10), rate(b, "cauliflower-gnocchi", 2, 11),
+        ...cols.flatMap((x) => x.items.map((i) => tried(users.get(x.c.ownerId)!, i.productId.slice(2), 5))),
+        tried(b, "cauliflower-gnocchi", 11),
       );
       db.reviews.push(
         rv(a, "mandarin-orange-chicken", "Demo review: crisped it in the air fryer and only used half the sauce. Exactly what I want on a weeknight.", 6),
@@ -567,6 +586,7 @@ export class LocalStore implements SaporStore {
       db.reviewMedia = db.reviewMedia.filter((m) => !demoReviews.has(m.reviewId));
       db.collections = db.collections.filter((c) => !demoCols.has(c.id));
       db.collectionItems = db.collectionItems.filter((i) => !demoCols.has(i.collectionId));
+      db.comparisons = db.comparisons.filter((x) => !demo.has(x.userId));
       if (db.sessionUserId && demo.has(db.sessionUserId)) db.sessionUserId = null;
     });
   }

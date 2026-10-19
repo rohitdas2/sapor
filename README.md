@@ -1,6 +1,6 @@
 # Sapor
 
-A mobile-first web app for tracking, rating, ranking and discovering Trader Joe's food and drink products.
+A mobile-first web app for tracking, ranking and discovering Trader Joe's food and drink products.
 Sapor is an independent community app and is **not affiliated with Trader Joe's**.
 
 ## Modes
@@ -23,9 +23,10 @@ Open http://localhost:3000.
 
 ## What works
 
-- Searchable catalog with category filters, a "New to the catalog" section and a "Community favorites" section. Favorites appear only when at least two users have shared a rating and the average is 4★ or higher.
-- One-tap **Want to try** / **Tried**. After marking tried, a sheet offers an optional rating, rating sharing and ranking. A second tap on Tried opens the sheet; it never deletes data.
-- Product page: your status, rating, private notes, rankings, photo review (public or "only me"), community reviews, public rankings containing the product, and a shared-rating average with its count.
+- Searchable catalog with category filters, a "New to the catalog" section and a "Community favorites" section. Favorites appear only for products in the top 3 of public rankings from at least two people.
+- One-tap **Want to try** / **Tried**. After marking tried, a sheet offers to add it to a ranking. Notes, photos and rankings are all optional.
+- **Guided ranking (no star ratings):** adding a product to a ranking asks "Which did you prefer?" against well-chosen items (binary insertion, about log2(n) questions). Answers are Prefer this, Prefer that, About the same (tie) or I'm not sure (try a different item). You can leave an item unplaced and come back later. The placement is shown for confirmation, with Compare again and Adjust by hand. Every answer is stored in `comparisons`, and the confirmed order is the source of truth.
+- Product page: your status, private notes, rankings, photo review (public or "only me"), community reviews, public rankings containing the product.
 - My list: Tried, Want to try and Rankings tabs, with search, category filter and sort.
 - Ranked collections:
   - Create, rename, describe and delete them.
@@ -38,10 +39,11 @@ Open http://localhost:3000.
 
 ### Rules enforced
 
-- A rating (1–5, optional) is stored only on `user_products` and is independent of rankings. Changing a rating never touches `collection_items`, and a reorder only updates rows for that one collection.
-- A product can be tried with no rating, review or ranking.
-- Community averages include only ratings where `rating_public = true`. Reviews show the author's rating only if they shared it.
-- Notes, tracking status and private collections or reviews are never returned for other users.
+- No numeric ratings anywhere. Opinions live in per-collection placements, and ties share a rank.
+- Each ranking is independent. Placing or reordering in one never touches another.
+- A product can be tried with no review or ranking.
+- Community favorites appear only for products in the top 3 of public rankings from at least two people.
+- Notes, tracking status, comparisons and private collections or reviews are never returned for other users.
 
 ## Project layout
 
@@ -63,7 +65,7 @@ The 30 products use well-known names and short general descriptions. The catalog
 - No prices or stock information.
 - `availability` set to `unknown`, except for products widely known as seasonal releases.
 - `last_verified_at` left null, because nothing has been checked against the retailer's site yet.
-- Generated placeholder images, labeled "Placeholder image". Real imagery needs permission first.
+- Product images are emoji illustrations. Real product photos need permission first, then go in `products.image_path`.
 
 ## Connecting Supabase
 
@@ -81,8 +83,8 @@ Setup:
 
 How it maps to the schema:
 
-- Collection add, remove and reorder go through the `add_to_collection`, `remove_from_collection` and `reorder_collection` RPCs, so each one is a single transaction.
-- Community averages come from the `product_rating_stats` view. A reviewer's stars come from `public_ratings`. Both include only opt-in ratings.
+- Collection add, remove and reorder go through the `add_to_collection`, `remove_from_collection` and `save_collection_order` RPCs, so each one is a single transaction.
+- Community favorites come from the `community_top_picks` view, which reads public rankings only. Guided-placement answers go in `comparisons`, which only the owner can access.
 - Review photos upload to `review-media/<user id>/<uuid>.<ext>`. Uploads are validated client-side and limited by bucket type and size rules. If saving a review fails partway, uploaded files are cleaned up.
 
 Before launch:

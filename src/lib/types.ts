@@ -30,6 +30,8 @@ export interface Product {
   description: string;
   imageUrl: string | null;
   imageIsPlaceholder: boolean;
+  /** Illustration shown when there's no permitted product photo. */
+  emoji: string | null;
   availability: Availability;
   sourceUrl: string | null;
   lastVerifiedAt: string | null;
@@ -47,13 +49,11 @@ export interface Profile {
   createdAt: string;
 }
 
-/** Private to its owner. Rating lives here and only here. */
+/** Private to its owner. No numeric ratings: opinions live in collection placements. */
 export interface UserProduct {
   userId: string;
   productId: string;
   status: TrackStatus;
-  rating: number | null;
-  ratingPublic: boolean;
   notes: string | null;
   firstTriedOn: string | null;
   createdAt: string;
@@ -73,8 +73,30 @@ export interface Collection {
 export interface CollectionItem {
   collectionId: string;
   productId: string;
-  position: number;
+  /** Order among placed items; null = added but not yet placed ("return later"). */
+  position: number | null;
+  /** Shares a rank with the item directly above it. */
+  tiedWithPrev: boolean;
   addedAt: string;
+}
+
+export type ComparisonResult = "prefer_this" | "prefer_that" | "same" | "unsure";
+
+/** One answer from guided placement. "this" = the product being placed. */
+export interface Comparison {
+  id: string;
+  userId: string;
+  collectionId: string;
+  productId: string;
+  otherProductId: string;
+  result: ComparisonResult;
+  createdAt: string;
+}
+
+/** A placed entry as saved by the user (the confirmed order is the source of truth). */
+export interface OrderEntry {
+  productId: string;
+  tiedWithPrev: boolean;
 }
 
 export interface ReviewMedia {
@@ -96,10 +118,9 @@ export interface Review {
   media: ReviewMedia[];
 }
 
-/** A review as other people see it: author + only the publicly shared rating. */
+/** A review as other people see it. */
 export interface PublicReview extends Review {
   author: Profile;
-  publicRating: number | null;
 }
 
 export interface CollectionWithItems extends Collection {
@@ -107,9 +128,10 @@ export interface CollectionWithItems extends Collection {
   items: (CollectionItem & { product: Product })[];
 }
 
-export interface RatingStats {
-  count: number;
-  average: number | null;
+export interface CommunityPick {
+  product: Product;
+  /** Distinct people who placed it in the top 3 of a public ranking. */
+  topThreeCount: number;
 }
 
 export type FeedEntry =

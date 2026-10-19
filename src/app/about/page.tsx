@@ -19,16 +19,16 @@ export default function AboutPage() {
         <p className="mt-1">
           The starter catalog is a small, hand-curated list of well-known products with short general descriptions. Sapor
           does not show prices or store stock. &ldquo;Seasonal&rdquo; means a product is generally known to be a seasonal
-          release, not that it&apos;s on shelves now. Images are placeholders until permitted product photos are added.
+          release, not that it&apos;s on shelves now. Product images are emoji illustrations until permitted product photos are added.
         </p>
       </section>
 
       <section>
-        <h2 className="h-display text-xl font-semibold">Ratings vs. rankings</h2>
+        <h2 className="h-display text-xl font-semibold">How ranking works</h2>
         <p className="mt-1">
-          A <strong>rating</strong> (1–5, optional) is your overall opinion of a product. A <strong>ranking</strong> is where a
-          product sits inside one of your collections. They&apos;re independent: changing a rating never reorders a
-          collection, and reordering one collection never touches another.
+          Sapor doesn&apos;t use star ratings. When you add something you tried to a ranking, it asks a few quick
+          &ldquo;which did you prefer?&rdquo; questions to find its spot. Ties are fine, and you can always skip or adjust by hand.
+          Each ranking is independent, so reordering one never touches another.
         </p>
       </section>
 
@@ -37,7 +37,7 @@ export default function AboutPage() {
         <ul className="mt-1 list-disc space-y-1 pl-5">
           <li>Your tried and want-to-try lists and your notes are private.</li>
           <li>Reviews and rankings are private until you choose to make them public.</li>
-          <li>Your rating counts toward community averages only if you tick &ldquo;share my rating.&rdquo;</li>
+          <li>Community favorites come only from rankings people chose to make public.</li>
         </ul>
       </section>
 

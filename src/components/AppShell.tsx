@@ -34,9 +34,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
       )}
-      <header className="sticky top-0 z-30 border-b border-line/70 bg-cream/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-ink/5 bg-cream/75 backdrop-blur-xl backdrop-saturate-150">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="h-display text-2xl font-bold text-tomato" aria-label="Sapor home">
+          <Link href="/" className="font-logo text-[26px] font-bold text-tomato" aria-label="Sapor home">
             sapor<span className="text-saffron">.</span>
           </Link>
           <nav className="hidden gap-1 md:flex" aria-label="Main">
@@ -71,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/5 bg-paper/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl backdrop-saturate-150 md:hidden"
       >
         <ul className="grid grid-cols-4">
           {NAV.map((n) => {

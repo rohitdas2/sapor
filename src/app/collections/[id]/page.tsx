@@ -17,7 +17,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { btn, EmptyState, errMsg, ErrorState, input, Loading, ProductImage, ProfileLink, useToast } from "@/components/ui";
 import { useCurrentUserId, useQuery, useStore } from "@/lib/data/provider";
-import type { CollectionWithItems, Product } from "@/lib/types";
+import { RankFlow } from "@/components/RankFlow";
+import { rankNumbers } from "@/lib/ranking";
+import type { CollectionWithItems, OrderEntry, Product } from "@/lib/types";
 
 export default function CollectionPage() {
   const { id } = useParams<{ id: string }>();
@@ -52,14 +54,14 @@ function PublicView({ c }: { c: CollectionWithItems }) {
     <div className="mx-auto max-w-2xl">
       <Header c={c} />
       <ShareButton c={c} />
-      {c.items.length === 0 ? (
+      {placedItems(c).length === 0 ? (
         <p className="mt-6 text-ink-soft">Nothing ranked yet.</p>
       ) : (
         <ol className="mt-5 space-y-2">
-          {c.items.map((i, idx) => (
+          {placedItems(c).map((i, idx, arr) => (
             <li key={i.productId}>
-              <Link href={`/products/${i.product.slug}`} className="flex items-center gap-3 rounded-2xl border border-line bg-paper p-2 pr-4 hover:bg-crust">
-                <Rank n={idx + 1} />
+              <Link href={`/products/${i.product.slug}`} className="flex items-center gap-3 rounded-2xl card bg-paper p-2 pr-4 hover:bg-crust">
+                <Rank n={rankNumbers(arr)[idx]} />
                 <ProductImage product={i.product} className="h-14 w-14 shrink-0 rounded-xl" />
                 <span className="font-semibold">{i.product.name}</span>
               </Link>
@@ -69,6 +71,10 @@ function PublicView({ c }: { c: CollectionWithItems }) {
       )}
     </div>
   );
+}
+
+function placedItems(c: CollectionWithItems) {
+  return c.items.filter((i) => i.position != null);
 }
 
 function Rank({ n }: { n: number }) {
@@ -113,19 +119,24 @@ function OwnerView({ c }: { c: CollectionWithItems }) {
   const toast = useToast();
   const router = useRouter();
   const { data: profile } = useQuery((s) => s.getProfile(c.ownerId), [c.ownerId]);
-  const [order, setOrder] = useState<string[]>(() => c.items.map((i) => i.productId));
+  const toOrder = () => placedItems(c).map((i) => ({ productId: i.productId, tiedWithPrev: i.tiedWithPrev }));
+  const [order, setOrder] = useState<OrderEntry[]>(toOrder);
+  const [placing, setPlacing] = useState<Product | null>(null);
+  const unplaced = c.items.filter((i) => i.position == null);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(c.title);
   const [description, setDescription] = useState(c.description ?? "");
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Keep local order in sync with the stored order (e.g. after add/remove).
-  const storedOrder = c.items.map((i) => i.productId).join(",");
+  const storedOrder = JSON.stringify(toOrder());
   const [syncedOrder, setSyncedOrder] = useState(storedOrder);
   if (syncedOrder !== storedOrder) {
     setSyncedOrder(storedOrder);
-    setOrder(storedOrder ? storedOrder.split(",") : []);
+    setOrder(JSON.parse(storedOrder));
   }
+  const ids = order.map((e) => e.productId);
+  const ranks = rankNumbers(order);
 
   const byId = useMemo(() => new Map(c.items.map((i) => [i.productId, i.product])), [c.items]);
   const sensors = useSensors(
@@ -134,12 +145,13 @@ function OwnerView({ c }: { c: CollectionWithItems }) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  async function commitOrder(next: string[]) {
+  async function commitOrder(next: OrderEntry[]) {
     const prev = order;
+    next = next.map((e, i) => (i === 0 ? { ...e, tiedWithPrev: false } : e));
     setOrder(next); // optimistic
     setSaveError(null);
     try {
-      await store.reorderCollection(c.id, next);
+      await store.saveOrder(c.id, next);
     } catch (e) {
       setOrder(prev);
       setSaveError(errMsg(e));
@@ -148,14 +160,23 @@ function OwnerView({ c }: { c: CollectionWithItems }) {
 
   function onDragEnd(e: DragEndEvent) {
     if (!e.over || e.active.id === e.over.id) return;
-    commitOrder(arrayMove(order, order.indexOf(String(e.active.id)), order.indexOf(String(e.over.id))));
+    moveTo(String(e.active.id), ids.indexOf(String(e.over.id)));
+  }
+
+  /** A hand-moved item leaves any tie; whoever was tied to it stays tied to its old neighbor. */
+  function moveTo(pid: string, to: number) {
+    const from = ids.indexOf(pid);
+    if (to < 0 || to >= order.length || from === to) return;
+    const detached = order.map((e, i) => (i === from + 1 && e.tiedWithPrev ? { ...e, tiedWithPrev: order[from].tiedWithPrev } : e));
+    commitOrder(arrayMove(detached, from, to).map((e) => (e.productId === pid ? { ...e, tiedWithPrev: false } : e)));
   }
 
   function move(pid: string, delta: -1 | 1) {
-    const from = order.indexOf(pid);
-    const to = from + delta;
-    if (to < 0 || to >= order.length) return;
-    commitOrder(arrayMove(order, from, to));
+    moveTo(pid, ids.indexOf(pid) + delta);
+  }
+
+  function toggleTie(pid: string) {
+    commitOrder(order.map((e) => (e.productId === pid ? { ...e, tiedWithPrev: !e.tiedWithPrev } : e)));
   }
 
   async function saveMeta(e: React.FormEvent) {
@@ -178,7 +199,7 @@ function OwnerView({ c }: { c: CollectionWithItems }) {
       </Link>
 
       {editing ? (
-        <form onSubmit={saveMeta} className="mt-3 space-y-2 rounded-3xl border border-line bg-paper p-4">
+        <form onSubmit={saveMeta} className="mt-3 space-y-2 rounded-3xl card bg-paper p-4">
           <label htmlFor="c-title" className="text-sm font-semibold">
             Title
           </label>
@@ -248,25 +269,49 @@ function OwnerView({ c }: { c: CollectionWithItems }) {
       )}
 
       <h2 className="sr-only">Ranked products</h2>
+      {unplaced.length > 0 && (
+        <section className="mt-6 rounded-3xl bg-saffron-soft p-4" aria-labelledby="unplaced-h">
+          <h2 id="unplaced-h" className="font-semibold">
+            Waiting to be placed
+          </h2>
+          <p className="text-sm text-ink-soft">A few quick “which did you prefer?” questions will find each one&apos;s spot.</p>
+          <ul className="mt-3 space-y-2">
+            {unplaced.map((i) => (
+              <li key={i.productId} className="flex items-center gap-3 rounded-2xl bg-paper p-2">
+                <ProductImage product={i.product} className="h-11 w-11 shrink-0 rounded-xl" />
+                <span className="min-w-0 flex-1 truncate font-medium">{i.product.name}</span>
+                <button type="button" className={btn.primary} onClick={() => (order.length ? setPlacing(i.product) : commitOrder([{ productId: i.productId, tiedWithPrev: false }]))}>
+                  Place
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {placing && <RankFlow collection={c} product={placing} onClose={() => setPlacing(null)} />}
+
       {order.length === 0 ? (
         <div className="mt-6">
           <EmptyState title="Nothing ranked yet">Add products below, or from any product page.</EmptyState>
         </div>
       ) : (
         <>
-          <p className="mt-5 text-sm text-ink-soft">Drag the handle or use the arrows to reorder. Changes save instantly and only affect this ranking.</p>
+          <p className="mt-5 text-sm text-ink-soft">Drag, or use the arrows, to fine-tune. “=” ties an item with the one above. Changes save instantly and only affect this ranking.</p>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={order} strategy={verticalListSortingStrategy}>
+            <SortableContext items={ids} strategy={verticalListSortingStrategy}>
               <ol className="mt-3 space-y-2">
-                {order.map((pid, idx) => {
+                {order.map(({ productId: pid, tiedWithPrev }, idx) => {
                   const p = byId.get(pid);
                   return p ? (
                     <SortableRow
                       key={pid}
                       product={p}
                       index={idx}
+                      rank={ranks[idx]}
+                      tied={tiedWithPrev}
                       count={order.length}
                       onMove={(d) => move(pid, d)}
+                      onTie={() => toggleTie(pid)}
                       onRemove={async () => {
                         await store.removeFromCollection(c.id, pid);
                         toast(`Removed ${p.name}`);
@@ -280,7 +325,7 @@ function OwnerView({ c }: { c: CollectionWithItems }) {
         </>
       )}
 
-      <AddProducts collection={c} />
+      <AddProducts collection={c} onPlace={setPlacing} />
 
       <button
         type="button"
@@ -297,7 +342,25 @@ function OwnerView({ c }: { c: CollectionWithItems }) {
   );
 }
 
-function SortableRow({ product, index, count, onMove, onRemove }: { product: Product; index: number; count: number; onMove: (d: -1 | 1) => void; onRemove: () => void }) {
+function SortableRow({
+  product,
+  index,
+  rank,
+  tied,
+  count,
+  onMove,
+  onTie,
+  onRemove,
+}: {
+  product: Product;
+  index: number;
+  rank: number;
+  tied: boolean;
+  count: number;
+  onMove: (d: -1 | 1) => void;
+  onTie: () => void;
+  onRemove: () => void;
+}) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: product.id });
   return (
     <li
@@ -309,26 +372,36 @@ function SortableRow({ product, index, count, onMove, onRemove }: { product: Pro
         ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
-        aria-label={`Drag to reorder ${product.name}, currently number ${index + 1}`}
+        aria-label={`Drag to reorder ${product.name}, currently number ${rank}`}
         className="flex h-11 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-ink-soft hover:bg-crust active:cursor-grabbing"
       >
         <svg viewBox="0 0 10 16" className="h-4 w-3" fill="currentColor" aria-hidden>
           {[2, 8, 14].map((y) => [2, 8].map((x) => <circle key={`${x}${y}`} cx={x} cy={y} r="1.5" />))}
         </svg>
       </button>
-      <Rank n={index + 1} />
+      <Rank n={rank} />
       <Link href={`/products/${product.slug}`} className="flex min-w-0 flex-1 items-center gap-2 hover:underline">
         <ProductImage product={product} className="hidden h-12 w-12 shrink-0 rounded-lg sm:flex" />
         <span className="line-clamp-2 font-semibold leading-tight">{product.name}</span>
       </Link>
       <div className="flex shrink-0 items-center">
-        <button type="button" onClick={() => onMove(-1)} disabled={index === 0} aria-label={`Move ${product.name} up`} className="h-11 w-11 rounded-full text-lg hover:bg-crust disabled:opacity-25">
+        <button type="button" onClick={() => onMove(-1)} disabled={index === 0} aria-label={`Move ${product.name} up`} className="h-11 w-9 rounded-full text-lg hover:bg-crust disabled:opacity-25">
           ↑
         </button>
-        <button type="button" onClick={() => onMove(1)} disabled={index === count - 1} aria-label={`Move ${product.name} down`} className="h-11 w-11 rounded-full text-lg hover:bg-crust disabled:opacity-25">
+        <button type="button" onClick={() => onMove(1)} disabled={index === count - 1} aria-label={`Move ${product.name} down`} className="h-11 w-9 rounded-full text-lg hover:bg-crust disabled:opacity-25">
           ↓
         </button>
-        <button type="button" onClick={onRemove} aria-label={`Remove ${product.name} from this ranking`} className="h-11 w-11 rounded-full text-lg text-ink-soft hover:bg-crust">
+        <button
+          type="button"
+          onClick={onTie}
+          disabled={index === 0}
+          aria-pressed={tied}
+          aria-label={`Tie ${product.name} with the item above`}
+          className={`h-11 w-9 rounded-full text-lg font-semibold disabled:opacity-25 ${tied ? "bg-saffron-soft text-[#7a5300]" : "text-ink-soft hover:bg-crust"}`}
+        >
+          =
+        </button>
+        <button type="button" onClick={onRemove} aria-label={`Remove ${product.name} from this ranking`} className="h-11 w-9 rounded-full text-lg text-ink-soft hover:bg-crust">
           ×
         </button>
       </div>
@@ -336,7 +409,7 @@ function SortableRow({ product, index, count, onMove, onRemove }: { product: Pro
   );
 }
 
-function AddProducts({ collection }: { collection: CollectionWithItems }) {
+function AddProducts({ collection, onPlace }: { collection: CollectionWithItems; onPlace: (p: Product) => void }) {
   const store = useStore();
   const toast = useToast();
   const [q, setQ] = useState("");
@@ -366,8 +439,9 @@ function AddProducts({ collection }: { collection: CollectionWithItems }) {
               className="flex min-h-12 w-full items-center justify-between rounded-xl bg-paper px-3 text-left hover:bg-cream"
               onClick={async () => {
                 try {
-                  await store.addToCollection(collection.id, p.id);
-                  toast(`Added at #${collection.items.length + 1}`);
+                  const { placed } = await store.addToCollection(collection.id, p.id);
+                  if (placed) toast("Added as #1");
+                  else onPlace(p);
                 } catch (e) {
                   toast(errMsg(e), "error");
                 }

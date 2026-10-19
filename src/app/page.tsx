@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
-import { EmptyState, ErrorState, input, Loading, Stars } from "@/components/ui";
+import { EmptyState, ErrorState, input, Loading } from "@/components/ui";
 import { useQuery } from "@/lib/data/provider";
 import { CATEGORIES, type CategoryId } from "@/lib/types";
 
@@ -50,28 +50,25 @@ export default function DiscoverPage() {
 
       {!filtering && (
         <>
-          <Section title="Community favorites" note="Rated 4★+ on average by at least two people who chose to share their ratings.">
+          <Section title="Community favorites" note="In the top 3 of public rankings from at least two people.">
             {favorites.loading && !favorites.data ? (
               <Loading />
             ) : favorites.data?.length ? (
               <Grid>
-                {favorites.data.map(({ product, stats }) => (
+                {favorites.data.map(({ product, topThreeCount }) => (
                   <ProductCard
                     key={product.id}
                     product={product}
                     userProduct={byId.get(product.id) ?? null}
                     extra={
-                      <p className="mt-1 flex items-center gap-1 text-sm text-ink-soft">
-                        <Stars value={stats.average!} size="text-sm" /> {stats.average!.toFixed(1)} · {stats.count} ratings
-                      </p>
+                      <p className="mt-1 text-sm text-ink-soft">Top 3 for {topThreeCount} people</p>
                     }
                   />
                 ))}
               </Grid>
             ) : (
               <EmptyState title="No community favorites yet">
-                Favorites show up here once people share their ratings. Rate what you&apos;ve tried and tick
-                &ldquo;share my rating&rdquo; to help.
+                Favorites show up once people make their rankings public. Share a ranking to help.
               </EmptyState>
             )}
           </Section>

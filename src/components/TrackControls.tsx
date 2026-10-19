@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useCurrentUserId, useQuery, useStore } from "@/lib/data/provider";
+import { rankNumbers } from "@/lib/ranking";
 import type { Product, UserProduct } from "@/lib/types";
-import { btn, errMsg, input, RatingInput, useToast } from "./ui";
+import { RankFlow } from "./RankFlow";
+import { btn, errMsg, input, useToast } from "./ui";
 
 function useSignInRedirect() {
   const router = useRouter();
@@ -49,7 +51,7 @@ export function QuickTrack({ product, userProduct, compact }: { product: Product
           aria-pressed={status === "want_to_try"}
           onClick={() => toggle("want_to_try")}
           className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border font-semibold ${size} ${
-            status === "want_to_try" ? "border-saffron bg-saffron-soft text-[#6b4800]" : "border-line bg-paper text-ink hover:bg-crust"
+            status === "want_to_try" ? "border-transparent bg-saffron-soft text-[#6b4800]" : "border-transparent bg-ink/[0.05] text-ink hover:bg-ink/10"
           }`}
         >
           <span aria-hidden>{status === "want_to_try" ? "★" : "☆"}</span> Want to try
@@ -59,7 +61,7 @@ export function QuickTrack({ product, userProduct, compact }: { product: Product
           aria-pressed={status === "tried"}
           onClick={() => toggle("tried")}
           className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border font-semibold ${size} ${
-            status === "tried" ? "border-basil bg-basil text-white" : "border-line bg-paper text-ink hover:bg-crust"
+            status === "tried" ? "border-transparent bg-basil text-white" : "border-transparent bg-ink/[0.05] text-ink hover:bg-ink/10"
           }`}
         >
           <span aria-hidden>✓</span> Tried
@@ -72,23 +74,12 @@ export function QuickTrack({ product, userProduct, compact }: { product: Product
 
 /** Bottom sheet shown right after marking tried. Every field is optional. */
 export function TriedSheet({ product, onClose }: { product: Product; onClose: () => void }) {
-  const store = useStore();
-  const toast = useToast();
-  const { data: up } = useQuery((s) => s.myUserProduct(product.id), [product.id]);
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     // No close() in cleanup: it would fire onClose during StrictMode's re-run.
     if (ref.current && !ref.current.open) ref.current.showModal();
   }, []);
-
-  async function patch(p: Parameters<typeof store.updateUserProduct>[1]) {
-    try {
-      await store.updateUserProduct(product.id, p);
-    } catch (e) {
-      toast(errMsg(e), "error");
-    }
-  }
 
   return (
     <dialog
@@ -102,25 +93,11 @@ export function TriedSheet({ product, onClose }: { product: Product; onClose: ()
         <h2 id="tried-title" className="h-display mt-1 text-2xl font-semibold">
           {product.name}
         </h2>
-        <p className="mt-1 text-sm text-ink-soft">Add details now or later — all optional.</p>
-
-        <div className="mt-5">
-          <p className="mb-1 text-sm font-semibold">How was it?</p>
-          <RatingInput value={up?.rating ?? null} onChange={(rating) => patch({ rating })} />
-          <label className="mt-2 flex items-center gap-2 text-sm text-ink-soft">
-            <input
-              type="checkbox"
-              className="h-5 w-5 accent-basil"
-              checked={up?.ratingPublic ?? false}
-              onChange={(e) => patch({ ratingPublic: e.target.checked })}
-            />
-            Share my rating in community averages
-          </label>
-        </div>
+        <p className="mt-1 text-sm text-ink-soft">Rank it now, or add notes and photos later. All optional.</p>
 
         <div className="mt-5">
           <p className="mb-2 text-sm font-semibold">Add to a ranking</p>
-          <CollectionPicker productId={product.id} />
+          <CollectionPicker product={product} />
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">
@@ -137,12 +114,15 @@ export function TriedSheet({ product, onClose }: { product: Product; onClose: ()
 }
 
 /** Toggle membership of a product across the user's collections; create one inline. */
-export function CollectionPicker({ productId }: { productId: string }) {
+export function CollectionPicker({ product }: { product: Product }) {
+  const productId = product.id;
   const store = useStore();
   const toast = useToast();
   const { data: cols, loading } = useQuery((s) => s.myCollections(), []);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
+  const [placing, setPlacing] = useState<string | null>(null);
+  const placingCol = cols?.find((c) => c.id === placing);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -162,9 +142,14 @@ export function CollectionPicker({ productId }: { productId: string }) {
 
   async function toggle(colId: string, inIt: boolean, name: string) {
     try {
-      if (inIt) await store.removeFromCollection(colId, productId);
-      else await store.addToCollection(colId, productId);
-      toast(inIt ? `Removed from “${name}”` : `Added to “${name}”`);
+      if (inIt) {
+        await store.removeFromCollection(colId, productId);
+        toast(`Removed from “${name}”`);
+        return;
+      }
+      const { placed } = await store.addToCollection(colId, productId);
+      if (placed) toast(`#1 in “${name}”`);
+      else setPlacing(colId); // guide placement by comparison
     } catch (err) {
       toast(errMsg(err), "error");
     }
@@ -174,19 +159,29 @@ export function CollectionPicker({ productId }: { productId: string }) {
   return (
     <div className="space-y-2">
       {cols?.map((c) => {
-        const idx = c.items.findIndex((i) => i.productId === productId);
-        const inIt = idx >= 0;
+        const item = c.items.find((i) => i.productId === productId);
+        const inIt = !!item;
+        const placed = c.items.filter((i) => i.position != null);
+        const rank = item?.position != null ? rankNumbers(placed)[placed.findIndex((i) => i.productId === productId)] : null;
         return (
+          <div key={c.id} className="flex gap-2">
           <button
-            key={c.id}
             type="button"
             aria-pressed={inIt}
             onClick={() => toggle(c.id, inIt, c.title)}
             className={`flex min-h-12 w-full items-center justify-between rounded-2xl border px-4 text-left ${inIt ? "border-basil bg-basil-soft" : "border-line bg-paper hover:bg-crust"}`}
           >
             <span className="font-medium">{c.title}</span>
-            <span className="text-sm text-ink-soft">{inIt ? `#${idx + 1} of ${c.items.length} ✓` : `${c.items.length} items`}</span>
+            <span className="text-sm text-ink-soft">
+              {!inIt ? `${c.items.length} items` : rank ? `#${rank} of ${placed.length} ✓` : "Not placed yet"}
+            </span>
           </button>
+          {inIt && rank == null && (
+            <button type="button" className={btn.primary} onClick={() => setPlacing(c.id)}>
+              Place
+            </button>
+          )}
+          </div>
         );
       })}
       <form onSubmit={create} className="flex gap-2">
@@ -205,6 +200,7 @@ export function CollectionPicker({ productId }: { productId: string }) {
           Create
         </button>
       </form>
+      {placingCol && product && <RankFlow collection={placingCol} product={product} onClose={() => setPlacing(null)} />}
     </div>
   );
 }

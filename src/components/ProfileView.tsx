@@ -66,7 +66,7 @@ export function ProfileView({ userId }: { userId: string }) {
           <ul className="mt-3 grid gap-3 sm:grid-cols-2">
             {others.map((c) => (
               <li key={c.id}>
-                <Link href={`/collections/${c.id}`} className="block rounded-3xl border border-line bg-paper p-4 hover:bg-crust">
+                <Link href={`/collections/${c.id}`} className="block rounded-3xl card bg-paper p-4 hover:bg-crust">
                   <span className="h-display font-semibold">{c.title}</span>
                   <span className="block text-sm text-ink-soft">{c.items.length} ranked</span>
                 </Link>
@@ -160,7 +160,7 @@ function EditProfile({ name, bio, onDone }: { name: string; bio: string; onDone:
   const [b, setB] = useState(bio);
   return (
     <form
-      className="space-y-2 rounded-3xl border border-line bg-paper p-4"
+      className="space-y-2 rounded-3xl card bg-paper p-4"
       onSubmit={async (e) => {
         e.preventDefault();
         try {

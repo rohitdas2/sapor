@@ -13,8 +13,7 @@
   --color-basil-soft: #e3efe2;
   --color-saffron: #c98a0e;
   --color-saffron-soft: #fbefd2;
-  --font-sans: var(--font-dmsans);
-  --font-display: var(--font-fraunces);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-dmsans), system-ui, sans-serif;
 }
 
 body {
@@ -27,7 +26,23 @@ body {
   outline-offset: 2px;
 }
 
+/* Headings: system (SF Pro on Apple devices), tight like Apple large titles. */
 .h-display {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-dmsans), system-ui, sans-serif;
+  letter-spacing: -0.022em;
+}
+
+/* The wordmark keeps the serif. */
+.font-logo {
   font-family: var(--font-fraunces), Georgia, serif;
   letter-spacing: -0.01em;
+}
+
+/* Soft, borderless surfaces. */
+.card {
+  box-shadow: 0 0 0 0.5px rgb(42 33 24 / 0.08), 0 1px 2px rgb(42 33 24 / 0.04), 0 8px 24px -12px rgb(42 33 24 / 0.12);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
 }

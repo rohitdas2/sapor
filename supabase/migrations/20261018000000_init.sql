@@ -54,6 +54,7 @@ create table public.products (
   category text not null check (category in ('frozen-meals','snacks','desserts','sauces','bakery','drinks')),
   description text not null default '',
   image_path text, -- Supabase Storage path in bucket 'product-images', or null for placeholder
+  emoji text, -- illustration shown until a permitted photo exists
   availability availability_status not null default 'unknown',
   source_url text,
   last_verified_at timestamptz,
@@ -69,8 +70,6 @@ create table public.user_products (
   user_id uuid not null references public.profiles (id) on delete cascade,
   product_id uuid not null references public.products (id) on delete cascade,
   status track_status not null,
-  rating smallint check (rating between 1 and 5),
-  rating_public boolean not null default false,
   notes text check (char_length(notes) <= 2000),
   first_tried_on date,
   created_at timestamptz not null default now(),
@@ -97,10 +96,11 @@ alter table public.profiles
 create table public.collection_items (
   collection_id uuid not null references public.collections (id) on delete cascade,
   product_id uuid not null references public.products (id) on delete cascade,
-  position integer not null check (position >= 0),
+  position integer check (position >= 0), -- null = added but not yet placed
+  tied_with_prev boolean not null default false, -- shares a rank with the item above
   added_at timestamptz not null default now(),
   primary key (collection_id, product_id), -- no duplicates within a collection
-  unique (collection_id, position) deferrable initially deferred
+  unique (collection_id, position) deferrable initially deferred -- nulls (unplaced) are allowed
 );
 
 -- ---------- reviews ----------
@@ -114,6 +114,19 @@ create table public.reviews (
   updated_at timestamptz not null default now(),
   unique (author_id, product_id) -- one editable review per user + product
 );
+-- Answers from guided placement ("which did you prefer?"). Private to the user.
+create table public.comparisons (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  collection_id uuid not null references public.collections (id) on delete cascade,
+  product_id uuid not null references public.products (id) on delete cascade,
+  other_product_id uuid not null references public.products (id) on delete cascade,
+  result text not null check (result in ('prefer_this','prefer_that','same','unsure')),
+  created_at timestamptz not null default now()
+);
+alter table public.comparisons enable row level security;
+create policy "own comparisons" on public.comparisons for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
 create index reviews_product_idx on public.reviews (product_id, created_at desc);
 
 create table public.review_media (
@@ -152,7 +165,7 @@ create policy "retailers readable" on public.retailers for select using (true);
 create policy "products readable" on public.products for select using (true);
 create policy "products admin write" on public.products for all using (public.is_admin()) with check (public.is_admin());
 
--- Tracking: strictly owner-only. Public ratings are exposed via the view below, never this table.
+-- Tracking: strictly owner-only.
 create policy "own tracking" on public.user_products for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- Collections: public ones readable by all; owner has full access.
@@ -199,64 +212,83 @@ end $$;
 create trigger t_collections_unpin after update of visibility on public.collections
   for each row execute function public.unpin_private_collection();
 
--- ---------- public ratings (opt-in only) ----------
--- Exposes only (user, product, rating) where the user chose to share it. No notes, no status.
-create view public.public_ratings with (security_invoker = false) as
-  select user_id, product_id, rating
-  from public.user_products
-  where rating_public and rating is not null and status = 'tried';
-grant select on public.public_ratings to anon, authenticated;
-
-create view public.product_rating_stats with (security_invoker = false) as
-  select product_id, count(*)::int as rating_count, avg(rating)::numeric(3,2) as rating_avg
-  from public.public_ratings group by product_id;
-grant select on public.product_rating_stats to anon, authenticated;
+-- ---------- community picks ----------
+-- Products in the top 3 (competition rank, ties share a rank) of public rankings.
+create view public.community_top_picks with (security_invoker = true) as
+  with placed as (
+    select ci.product_id, c.owner_id, c.id as collection_id, ci.position, ci.tied_with_prev
+    from public.collection_items ci join public.collections c on c.id = ci.collection_id
+    where c.visibility = 'public' and ci.position is not null
+  )
+  select product_id, count(distinct owner_id)::int as top_three_count
+  from (
+    select p.product_id, p.owner_id,
+      -- rank = 1 + items above the head of this item's tie group
+      1 + (select count(*) from placed q where q.collection_id = p.collection_id
+             and q.position < coalesce((select max(h.position) from placed h where h.collection_id = p.collection_id
+                                        and h.position <= p.position and not h.tied_with_prev), p.position)) as rank
+    from placed p
+  ) r
+  where rank <= 3
+  group by product_id;
+grant select on public.community_top_picks to anon, authenticated;
 
 -- ---------- atomic collection operations ----------
--- Replace the complete order of a collection in one transaction.
-create function public.reorder_collection(p_collection_id uuid, p_product_ids uuid[]) returns void
+-- Save the confirmed order of placed items in one transaction.
+-- p_order: [{"product_id": uuid, "tied_with_prev": bool}, ...]. Items not listed become unplaced.
+create function public.save_collection_order(p_collection_id uuid, p_order jsonb) returns void
 language plpgsql security invoker set search_path = public as $$
-declare
-  existing uuid[];
 begin
-  if not exists (select 1 from collections where id = p_collection_id and owner_id = auth.uid()) then
-    raise exception 'Not your collection';
-  end if;
-  select array_agg(product_id order by product_id) into existing
-    from collection_items where collection_id = p_collection_id for update;
-  if coalesce(existing, '{}') <> coalesce((select array_agg(x order by x) from unnest(p_product_ids) x), '{}') then
+  perform 1 from collections where id = p_collection_id and owner_id = auth.uid() for update;
+  if not found then raise exception 'Not your collection'; end if;
+  if (select count(*) from jsonb_array_elements(p_order) e
+        where not exists (select 1 from collection_items ci
+                          where ci.collection_id = p_collection_id and ci.product_id = (e ->> 'product_id')::uuid))
+     > 0 or (select count(distinct e ->> 'product_id') from jsonb_array_elements(p_order) e) <> jsonb_array_length(p_order) then
     raise exception 'Order does not match collection contents';
   end if;
-  update collection_items ci set position = o.idx - 1
-    from unnest(p_product_ids) with ordinality as o(pid, idx)
-    where ci.collection_id = p_collection_id and ci.product_id = o.pid;
+  update collection_items set position = null, tied_with_prev = false where collection_id = p_collection_id;
+  update collection_items ci set position = o.idx - 1, tied_with_prev = (o.idx > 1 and coalesce((o.e ->> 'tied_with_prev')::boolean, false))
+    from jsonb_array_elements(p_order) with ordinality as o(e, idx)
+    where ci.collection_id = p_collection_id and ci.product_id = (o.e ->> 'product_id')::uuid;
   update collections set updated_at = now() where id = p_collection_id;
 end $$;
 
--- Append a product at the end (no-op if already present).
-create function public.add_to_collection(p_collection_id uuid, p_product_id uuid) returns void
+-- Add unplaced; the first item in an empty ranking becomes its starting entry. Returns whether placed.
+create function public.add_to_collection(p_collection_id uuid, p_product_id uuid) returns boolean
 language plpgsql security invoker set search_path = public as $$
+declare
+  is_placed boolean;
 begin
   perform 1 from collections where id = p_collection_id and owner_id = auth.uid() for update;
   if not found then raise exception 'Not your collection'; end if;
-  insert into collection_items (collection_id, product_id, position)
-    select p_collection_id, p_product_id, coalesce(max(position) + 1, 0)
-    from collection_items where collection_id = p_collection_id
-  on conflict (collection_id, product_id) do nothing;
+  select position is not null into is_placed from collection_items where collection_id = p_collection_id and product_id = p_product_id;
+  if found then return is_placed; end if;
+  is_placed := not exists (select 1 from collection_items where collection_id = p_collection_id and position is not null);
+  insert into collection_items (collection_id, product_id, position) values (p_collection_id, p_product_id, case when is_placed then 0 end);
   update collections set updated_at = now() where id = p_collection_id;
+  return is_placed;
 end $$;
 
--- Remove a product and close the gap.
+-- Remove a product, close the gap, and keep ties intact.
 create function public.remove_from_collection(p_collection_id uuid, p_product_id uuid) returns void
 language plpgsql security invoker set search_path = public as $$
+declare
+  removed record;
 begin
   perform 1 from collections where id = p_collection_id and owner_id = auth.uid() for update;
   if not found then raise exception 'Not your collection'; end if;
-  delete from collection_items where collection_id = p_collection_id and product_id = p_product_id;
+  delete from collection_items where collection_id = p_collection_id and product_id = p_product_id returning * into removed;
+  if removed.position is not null and not removed.tied_with_prev then
+    -- If the next item was tied to the removed group head, it becomes the head.
+    update collection_items set tied_with_prev = false
+      where collection_id = p_collection_id and position = removed.position + 1;
+  end if;
   update collection_items ci set position = r.rn - 1
     from (select product_id, row_number() over (order by position) rn
-          from collection_items where collection_id = p_collection_id) r
+          from collection_items where collection_id = p_collection_id and position is not null) r
     where ci.collection_id = p_collection_id and ci.product_id = r.product_id;
+  update collection_items set tied_with_prev = false where collection_id = p_collection_id and position = 0;
   update collections set updated_at = now() where id = p_collection_id;
 end $$;
 
