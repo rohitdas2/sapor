@@ -35,7 +35,7 @@ Open http://localhost:3000.
   - Share via the native share sheet or by copying the link.
   - Reorder by drag-and-drop (pointer, touch or keyboard) or with ↑/↓ buttons. Each reorder is saved as one write.
 - Profiles show pinned favorites, public rankings and recent public activity. On your own profile, a dashed "Only you can see this" panel adds want-to-try and notes counts plus private rankings.
-- Community: a chronological feed of public reviews and public non-empty rankings.
+- Discover includes "From the community": a chronological feed of public reviews and public rankings that have placed items. `/community` redirects there.
 
 ### Rules enforced
 

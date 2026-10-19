@@ -8,12 +8,11 @@ import { ToastProvider } from "./ui";
 const NAV = [
   { href: "/", label: "Discover", icon: "M11 4a7 7 0 1 0 4.4 12.4l4.1 4.1 1.4-1.4-4.1-4.1A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" },
   { href: "/me", label: "My list", icon: "M5 4h14v2H5V4Zm0 7h14v2H5v-2Zm0 7h9v2H5v-2Z" },
-  { href: "/community", label: "Community", icon: "M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 19c0-3 3-5 6-5s6 2 6 5H2Zm12.5 0c0-1.7-.7-3.2-1.9-4.3.9-.4 2-.7 3.4-.7 3 0 6 2 6 5h-7.5Z" },
   { href: "/profile", label: "Profile", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-8 8c0-3.3 3.6-6 8-6s8 2.7 8 6H4Z" },
 ];
 
 function isActive(path: string, href: string) {
-  if (href === "/") return path === "/" || path.startsWith("/products");
+  if (href === "/") return path === "/" || path.startsWith("/products") || path.startsWith("/community");
   if (href === "/me") return path.startsWith("/me") || path.startsWith("/collections");
   if (href === "/profile") return path.startsWith("/profile") || path.startsWith("/u/");
   return path.startsWith(href);
@@ -73,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/5 bg-paper/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl backdrop-saturate-150 md:hidden"
       >
-        <ul className="grid grid-cols-4">
+        <ul className="grid grid-cols-3">
           {NAV.map((n) => {
             const active = isActive(path, n.href);
             return (

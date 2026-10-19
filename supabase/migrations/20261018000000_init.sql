@@ -55,6 +55,11 @@ create table public.products (
   description text not null default '',
   image_path text, -- Supabase Storage path in bucket 'product-images', or null for placeholder
   emoji text, -- illustration shown until a permitted photo exists
+  -- Freely licensed representative photo (not the actual product) + required attribution
+  photo_url text,
+  photo_credit text,
+  photo_license text,
+  photo_source text,
   availability availability_status not null default 'unknown',
   source_url text,
   last_verified_at timestamptz,

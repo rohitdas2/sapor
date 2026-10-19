@@ -44,6 +44,10 @@ interface ProductRow {
   description: string;
   image_path: string | null;
   emoji: string | null;
+  photo_url: string | null;
+  photo_credit: string | null;
+  photo_license: string | null;
+  photo_source: string | null;
   availability: Product["availability"];
   source_url: string | null;
   last_verified_at: string | null;
@@ -166,7 +170,10 @@ export class SupabaseStore implements SaporStore {
       imageUrl: r.image_path ? this.sb.storage.from("product-images").getPublicUrl(r.image_path).data.publicUrl : null,
       imageIsPlaceholder: !r.image_path,
       emoji: r.emoji,
-      photo: null, // TODO: add photo columns to products when moving off the local catalog
+      photo:
+        r.photo_url && r.photo_license && r.photo_source
+          ? { url: r.photo_url, credit: r.photo_credit ?? "Unknown", license: r.photo_license, source: r.photo_source }
+          : null,
       availability: r.availability,
       sourceUrl: r.source_url,
       lastVerifiedAt: r.last_verified_at,

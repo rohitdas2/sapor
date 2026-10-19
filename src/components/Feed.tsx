@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useQuery } from "@/lib/data/provider";
 import { EmptyState, ErrorState, Loading, ProductImage, ProfileLink, timeAgo } from "./ui";
 
-export function Feed({ userId, empty }: { userId?: string; empty: React.ReactNode }) {
-  const { data, loading, error } = useQuery((s) => s.feed({ userId, limit: 50 }), [userId]);
+export function Feed({ userId, empty, limit = 50 }: { userId?: string; empty: React.ReactNode; limit?: number }) {
+  const { data, loading, error } = useQuery((s) => s.feed({ userId, limit }), [userId, limit]);
   if (error) return <ErrorState message={error} />;
   if (loading && !data) return <Loading />;
   if (!data?.length) return <>{empty}</>;

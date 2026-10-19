@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { DemoControls } from "@/components/DemoControls";
+import { Feed, FeedEmpty } from "@/components/Feed";
 import { ProductCard } from "@/components/ProductCard";
 import { EmptyState, ErrorState, input, Loading } from "@/components/ui";
 import { useQuery } from "@/lib/data/provider";
@@ -10,6 +12,7 @@ import { CATEGORIES, type CategoryId } from "@/lib/types";
 export default function DiscoverPage() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<CategoryId | null>(null);
+  const [feedLimit, setFeedLimit] = useState(6);
   const filtering = q.trim() !== "" || category !== null;
 
   const products = useQuery((s) => s.listProducts({ q, category }), [q, category]);
@@ -72,6 +75,27 @@ export default function DiscoverPage() {
               </EmptyState>
             )}
           </Section>
+
+          <div id="community" className="scroll-mt-20">
+            <Section title="From the community" note="Public reviews and shared rankings, newest first.">
+              <Feed
+                limit={feedLimit}
+                empty={
+                  <FeedEmpty>
+                    When people publish a review or make a ranking public, it shows up here. Nothing here is invented.
+                    <div className="mt-4">
+                      <DemoControls />
+                    </div>
+                  </FeedEmpty>
+                }
+              />
+              {feedLimit < 50 && (
+                <button type="button" className="mt-3 text-[15px] font-semibold text-tomato" onClick={() => setFeedLimit(50)}>
+                  Show more
+                </button>
+              )}
+            </Section>
+          </div>
 
           <Section title="New to the catalog" note="Most recently added to Sapor's catalog — not a claim about what's new in stores.">
             {newest.data ? (
