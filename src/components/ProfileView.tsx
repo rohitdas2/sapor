@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useCurrentUserId, useQuery, useStore } from "@/lib/data/provider";
+import { useCurrentUserId, useMe, useQuery, useStore } from "@/lib/data/provider";
 import type { CollectionWithItems } from "@/lib/types";
 import { Feed, FeedEmpty } from "./Feed";
 import { Avatar, btn, DemoBadge, EmptyState, errMsg, ErrorState, input, Loading, ProductImage, useToast } from "./ui";
@@ -107,6 +107,8 @@ function PinnedFavorites({ c }: { c: CollectionWithItems }) {
 
 function PrivateSection() {
   const store = useStore();
+  const me = useMe();
+  const toast = useToast();
   const router = useRouter();
   const ups = useQuery((s) => s.myUserProducts(), []);
   const cols = useQuery((s) => s.myCollections(), []);
@@ -140,6 +142,21 @@ function PrivateSection() {
           Next to try: {want.slice(0, 3).map((u) => productById.get(u.productId)?.name).join(", ")}
         </p>
       )}
+      <label className="mt-4 flex items-start gap-3 rounded-2xl bg-paper p-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-5 w-5 accent-basil"
+          checked={!!me?.profile.shareScores}
+          onChange={async (e) => {
+            await store.updateMyProfile({ shareScores: e.target.checked });
+            toast(e.target.checked ? "Your scores now count toward community averages" : "Your scores are private");
+          }}
+        />
+        <span>
+          <span className="font-semibold">Share my scores</span>
+          <span className="block text-ink-soft">Include your 1–10 scores in community averages and Top rated. Your notes and lists stay private.</span>
+        </span>
+      </label>
       <button
         className={`${btn.ghost} mt-3`}
         onClick={async () => {

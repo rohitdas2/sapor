@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCurrentUserId, useStore } from "@/lib/data/provider";
+import { useCurrentUserId } from "@/lib/data/provider";
 import { ToastProvider } from "./ui";
 
 const NAV = [
@@ -20,19 +20,10 @@ function isActive(path: string, href: string) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  const store = useStore();
   const userId = useCurrentUserId();
 
   return (
     <ToastProvider>
-      {store.mode === "local-demo" && (
-        <div className="bg-ink px-4 py-1.5 text-center text-xs text-white/90">
-          <strong>Local demo</strong> — data is saved only in this browser.{" "}
-          <Link href="/about" className="underline">
-            What this means
-          </Link>
-        </div>
-      )}
       <header className="sticky top-0 z-30 border-b border-ink/5 bg-cream/75 backdrop-blur-xl backdrop-saturate-150">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link href="/" className="font-logo text-[26px] font-bold text-tomato" aria-label="Sapor home">

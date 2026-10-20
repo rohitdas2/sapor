@@ -2,26 +2,22 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { SaporStore } from "./store";
-import { LocalStore } from "./local-store";
-import { SupabaseStore } from "./supabase-store";
+import { ApiStore } from "./api-store";
 
 const StoreContext = createContext<SaporStore | null>(null);
 
 function createStore(): SaporStore {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  // Production when Supabase is configured; otherwise the labeled local demo.
-  return url && anonKey ? new SupabaseStore(url, anonKey) : new LocalStore();
+  return new ApiStore();
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [store, setStore] = useState<SaporStore | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
-  // The store needs browser APIs (localStorage / auth session), so create it after mount.
+  // Resolve who is browsing (or anonymous) before first render so auth gates don't flash.
   useEffect(() => {
     let live = true;
     const s = createStore();
-    (s.init?.() ?? Promise.resolve()).then(
+    s.init().then(
       () => live && setStore(s),
       () => live && setInitError("Couldn't connect to Sapor. Check your connection and reload."),
     );
@@ -70,6 +66,12 @@ export function useCurrentUserId() {
   const store = useStore();
   useStoreVersion(store);
   return store.currentUserId();
+}
+
+export function useMe() {
+  const store = useStore();
+  useStoreVersion(store);
+  return store.me();
 }
 
 export function useQuery<T>(fn: (s: SaporStore) => Promise<T>, deps: unknown[]) {

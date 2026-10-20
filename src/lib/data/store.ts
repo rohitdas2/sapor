@@ -1,26 +1,27 @@
 import type {
   Collection,
   CollectionWithItems,
+  Comment,
+  CommunityPick,
+  ComparisonResult,
   FeedEntry,
+  OrderEntry,
   Product,
   ProductFilter,
   Profile,
   PublicReview,
-  CommunityPick,
-  ComparisonResult,
-  OrderEntry,
   Review,
+  ScoreStats,
+  Tier,
+  TopRated,
   TrackStatus,
   UserProduct,
   Visibility,
 } from "../types";
 
-export type StoreMode = "local-demo" | "supabase";
-
 export interface UserProductPatch {
   status?: TrackStatus;
   notes?: string | null;
-  firstTriedOn?: string | null;
 }
 
 export interface ReviewInput {
@@ -32,28 +33,33 @@ export interface ReviewInput {
   removeMediaIds?: string[];
 }
 
+export interface Me {
+  id: string;
+  role: "user" | "admin";
+  profile: Profile;
+}
+
 /**
- * Everything the UI can do. Implementations must enforce the same privacy
- * rules: other people's tracking rows, notes and private content are never
- * returned, and writes only touch the current user's records.
+ * Everything the UI can do, backed by the Sapor API (src/app/api). Anonymous
+ * visitors can call the read methods; writes require a signed-in user and the
+ * server enforces that and all privacy rules.
  */
 export interface SaporStore {
-  mode: StoreMode;
-  /** Optional async setup (e.g. restoring an auth session) before first render. */
-  init?(): Promise<void>;
+  init(): Promise<void>;
   subscribe(listener: () => void): () => void;
 
   // auth
+  me(): Me | null;
   currentUserId(): string | null;
   signUp(input: { email: string; password: string; displayName: string }): Promise<void>;
   signIn(input: { email: string; password: string }): Promise<void>;
   signOut(): Promise<void>;
 
-  // catalog (read-only for users)
+  // catalog + discovery (public)
   listProducts(filter?: ProductFilter): Promise<Product[]>;
   getProductBySlug(slug: string): Promise<Product | null>;
-  newAdditions(limit: number): Promise<Product[]>;
-  communityFavorites(limit: number): Promise<CommunityPick[]>;
+  scoreStats(slug: string): Promise<ScoreStats>;
+  discover(): Promise<{ newAdditions: Product[]; favorites: CommunityPick[]; topRated: TopRated[] }>;
 
   // personal tracking (private)
   myUserProducts(): Promise<UserProduct[]>;
@@ -62,40 +68,51 @@ export interface SaporStore {
   updateUserProduct(productId: string, patch: UserProductPatch): Promise<UserProduct>;
   untrack(productId: string): Promise<void>;
 
+  // scores: overall taste ranking per tier
+  myTier(tier: Tier): Promise<(OrderEntry & { product: Product })[]>;
+  saveTierOrder(tier: Tier, order: OrderEntry[]): Promise<void>;
+  clearScore(productId: string): Promise<void>;
+  recordComparison(input: { collectionId?: string | null; productId: string; otherProductId: string; result: ComparisonResult }): Promise<void>;
+
   // collections
   myCollections(): Promise<CollectionWithItems[]>;
   getCollection(id: string): Promise<CollectionWithItems | null>;
   createCollection(input: { title: string; description?: string; visibility: Visibility }): Promise<Collection>;
   updateCollection(id: string, patch: Partial<Pick<Collection, "title" | "description" | "visibility">>): Promise<void>;
   deleteCollection(id: string): Promise<void>;
-  /**
-   * Adds a product unplaced. If the collection has no placed items yet it
-   * becomes the starting entry at #1. Returns whether it was placed.
-   */
+  /** Adds unplaced; the first item in an empty ranking becomes #1. */
   addToCollection(collectionId: string, productId: string): Promise<{ placed: boolean }>;
   removeFromCollection(collectionId: string, productId: string): Promise<void>;
-  /**
-   * Save the full confirmed order of placed items (with ties) in one atomic
-   * write. Items in the collection but not in `order` become unplaced.
-   */
+  /** Save the full confirmed order (with ties) atomically; unlisted items become unplaced. */
   saveOrder(collectionId: string, order: OrderEntry[]): Promise<void>;
-  recordComparison(input: { collectionId: string; productId: string; otherProductId: string; result: ComparisonResult }): Promise<void>;
-  publicCollectionsForProduct(productId: string): Promise<CollectionWithItems[]>;
+  publicCollectionsForProduct(slug: string): Promise<CollectionWithItems[]>;
 
   // reviews
   myReview(productId: string): Promise<Review | null>;
   saveReview(productId: string, input: ReviewInput): Promise<Review>;
   deleteReview(productId: string): Promise<void>;
-  publicReviewsForProduct(productId: string): Promise<PublicReview[]>;
+  publicReviewsForProduct(slug: string): Promise<PublicReview[]>;
+
+  // comments
+  productComments(slug: string): Promise<Comment[]>;
+  addComment(slug: string, body: string, parentId?: string | null): Promise<Comment>;
+  deleteComment(id: string): Promise<void>;
 
   // profiles + community
   getProfile(userId: string): Promise<Profile | null>;
-  updateMyProfile(patch: Partial<Pick<Profile, "displayName" | "bio" | "avatarUrl" | "pinnedCollectionId">>): Promise<void>;
+  updateMyProfile(patch: Partial<Pick<Profile, "displayName" | "bio" | "pinnedCollectionId" | "shareScores">>): Promise<void>;
   publicCollectionsByUser(userId: string): Promise<CollectionWithItems[]>;
   feed(opts?: { userId?: string; limit?: number }): Promise<FeedEntry[]>;
 }
 
-export class StoreError extends Error {}
+export class StoreError extends Error {
+  constructor(
+    message: string,
+    public status = 0,
+  ) {
+    super(message);
+  }
+}
 
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 export const MAX_PHOTOS_PER_REVIEW = 4;

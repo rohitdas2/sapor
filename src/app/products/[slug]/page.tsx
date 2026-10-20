@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { InstagramEmbed } from "@/components/InstagramEmbed";
+import { ScoreFlow } from "@/components/RankFlow";
 import { CollectionPicker, QuickTrack } from "@/components/TrackControls";
 import {
   AvailabilityBadge,
@@ -17,10 +18,12 @@ import {
   Loading,
   ProductImage,
   ProfileLink,
+  ScoreBadge,
   timeAgo,
   useToast,
 } from "@/components/ui";
 import { useCurrentUserId, useQuery, useStore } from "@/lib/data/provider";
+import type { Comment as ProductComment } from "@/lib/types";
 import { MAX_PHOTOS_PER_REVIEW } from "@/lib/data/store";
 import type { Product, Visibility } from "@/lib/types";
 
@@ -51,6 +54,7 @@ export default function ProductPage() {
             Trader Joe&apos;s · {categoryLabel(p.category)} <AvailabilityBadge product={p} />
           </div>
           <h1 className="h-display mt-1 text-3xl font-bold leading-tight">{p.name}</h1>
+          <CommunityScore slug={p.slug} />
           <p className="mt-3 leading-relaxed">{p.description}</p>
           <PhotoCredit product={p} />
           <p className="mt-2 text-xs text-ink-soft">
@@ -64,8 +68,9 @@ export default function ProductPage() {
       {userId ? <MyProductPanel product={p} /> : <SignInPrompt />}
 
       {p.instagramUrl && <InstagramEmbed url={p.instagramUrl} />}
-      <PublicCollections productId={p.id} />
-      <CommunityReviews productId={p.id} />
+      <PublicCollections product={p} />
+      <CommunityReviews slug={p.slug} />
+      <Comments slug={p.slug} />
     </div>
   );
 }
@@ -74,7 +79,7 @@ function SignInPrompt() {
   return (
     <div className="mt-5 rounded-3xl bg-crust p-5">
       <p className="font-semibold">Keep track of this one</p>
-      <p className="text-sm text-ink-soft">Sign in to save it, mark it tried, rate it and add it to your rankings.</p>
+      <p className="text-sm text-ink-soft">Sign in to save it, mark it tried, score it and add it to your rankings.</p>
       <Link href={`/login?next=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/")}`} className={`${btn.primary} mt-3`}>
         Sign in
       </Link>
@@ -86,6 +91,7 @@ function MyProductPanel({ product }: { product: Product }) {
   const store = useStore();
   const toast = useToast();
   const { data: up, loading } = useQuery((s) => s.myUserProduct(product.id), [product.id]);
+  const [scoring, setScoring] = useState(false);
   const [notes, setNotes] = useState(up?.notes ?? "");
   const [syncedNotes, setSyncedNotes] = useState(up?.notes);
   if (syncedNotes !== up?.notes) {
@@ -111,6 +117,19 @@ function MyProductPanel({ product }: { product: Product }) {
       <div className="mt-3">
         <QuickTrack product={product} userProduct={up ?? null} />
       </div>
+
+      {up?.status === "tried" && (
+        <div className="mt-5 flex items-center gap-3 rounded-2xl bg-cream p-3">
+          {up.score != null ? <ScoreBadge score={up.score} size="lg" /> : <span className="text-[15px] text-ink-soft">Not scored yet</span>}
+          <div className="min-w-0 flex-1 text-sm text-ink-soft">
+            {up.score != null ? "Your score, from where it sits among everything you've tried." : "A few quick comparisons turn your opinion into a 1–10 score."}
+          </div>
+          <button type="button" className={up.score != null ? btn.secondary : btn.primary} onClick={() => setScoring(true)}>
+            {up.score != null ? "Re-score" : "Score it"}
+          </button>
+        </div>
+      )}
+      {scoring && <ScoreFlow product={product} onClose={() => setScoring(false)} />}
 
       {up?.status === "tried" && (
         <div className="mt-5 space-y-5">
@@ -288,8 +307,9 @@ function ReviewEditor({ productId }: { productId: string }) {
   );
 }
 
-function PublicCollections({ productId }: { productId: string }) {
-  const { data } = useQuery((s) => s.publicCollectionsForProduct(productId), [productId]);
+function PublicCollections({ product }: { product: Product }) {
+  const productId = product.id;
+  const { data } = useQuery((s) => s.publicCollectionsForProduct(product.slug), [product.slug]);
   if (!data?.length) return null;
   return (
     <section className="mt-8">
@@ -317,8 +337,8 @@ function PublicCollections({ productId }: { productId: string }) {
   );
 }
 
-function CommunityReviews({ productId }: { productId: string }) {
-  const { data, loading, error } = useQuery((s) => s.publicReviewsForProduct(productId), [productId]);
+function CommunityReviews({ slug }: { slug: string }) {
+  const { data, loading, error } = useQuery((s) => s.publicReviewsForProduct(slug), [slug]);
   return (
     <section className="mt-8">
       <h2 className="h-display text-xl font-semibold">Community reviews</h2>
@@ -348,6 +368,122 @@ function CommunityReviews({ productId }: { productId: string }) {
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  );
+}
+
+function CommunityScore({ slug }: { slug: string }) {
+  const { data } = useQuery((s) => s.scoreStats(slug), [slug]);
+  if (!data) return null;
+  if (!data.count) return <p className="mt-2 text-sm text-ink-soft">No shared scores yet.</p>;
+  return (
+    <p className="mt-2 flex items-center gap-2 text-sm text-ink-soft">
+      <ScoreBadge score={data.average!} /> community score from {data.count} {data.count === 1 ? "person who shares" : "people who share"} their scores
+    </p>
+  );
+}
+
+function Comments({ slug }: { slug: string }) {
+  const store = useStore();
+  const toast = useToast();
+  const userId = useCurrentUserId();
+  const { data, loading, error } = useQuery((s) => s.productComments(slug), [slug]);
+  const [body, setBody] = useState("");
+  const [replyTo, setReplyTo] = useState<ProductComment | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!body.trim()) return;
+    setBusy(true);
+    try {
+      await store.addComment(slug, body.trim(), replyTo?.id ?? null);
+      setBody("");
+      setReplyTo(null);
+    } catch (err) {
+      toast(errMsg(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const top = (data ?? []).filter((c) => !c.parentId);
+  const replies = (id: string) => (data ?? []).filter((c) => c.parentId === id);
+
+  const item = (c: ProductComment, nested = false) => (
+    <li key={c.id} className={nested ? "ml-8 mt-2" : ""}>
+      <div className="rounded-2xl bg-paper p-3 card">
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <ProfileLink profile={c.author} />
+          <span className="text-xs text-ink-soft">{timeAgo(c.createdAt)}</span>
+        </div>
+        <p className="mt-1.5 whitespace-pre-line text-[15px]">{c.body}</p>
+        <div className="mt-1 flex gap-3 text-[13px] font-semibold text-ink-soft">
+          {userId && !nested && (
+            <button type="button" onClick={() => setReplyTo(c)} className="hover:text-ink">
+              Reply
+            </button>
+          )}
+          {userId === c.author.id && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!confirm("Delete this comment?")) return;
+                await store.deleteComment(c.id).catch((e) => toast(errMsg(e), "error"));
+              }}
+              className="hover:text-tomato-dark"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      </div>
+      {!nested && replies(c.id).length > 0 && <ul>{replies(c.id).map((r) => item(r, true))}</ul>}
+    </li>
+  );
+
+  return (
+    <section className="mt-8" aria-labelledby="comments-h">
+      <h2 id="comments-h" className="h-display text-xl font-semibold">
+        Comments
+      </h2>
+      {error ? (
+        <ErrorState message={error} />
+      ) : loading && !data ? (
+        <Loading />
+      ) : top.length === 0 ? (
+        <p className="mt-2 text-ink-soft">No comments yet.</p>
+      ) : (
+        <ul className="mt-3 space-y-3">{top.map((c) => item(c))}</ul>
+      )}
+      {userId ? (
+        <form onSubmit={submit} className="mt-4">
+          {replyTo && (
+            <p className="mb-1 text-sm text-ink-soft">
+              Replying to {replyTo.author.displayName} ·{" "}
+              <button type="button" className="underline" onClick={() => setReplyTo(null)}>
+                cancel
+              </button>
+            </p>
+          )}
+          <label htmlFor="comment-body" className="sr-only">
+            Add a comment
+          </label>
+          <div className="flex gap-2">
+            <input id="comment-body" className={input} placeholder="Add a comment" value={body} maxLength={1000} onChange={(e) => setBody(e.target.value)} />
+            <button className={btn.primary} disabled={busy || !body.trim()}>
+              Post
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p className="mt-4 text-sm text-ink-soft">
+          <Link href={`/login?next=/products/${slug}`} className="font-semibold text-tomato underline">
+            Sign in
+          </Link>{" "}
+          to comment.
+        </p>
       )}
     </section>
   );

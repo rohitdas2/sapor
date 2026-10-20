@@ -79,6 +79,17 @@ export function AvailabilityBadge({ product }: { product: Product }) {
   return null;
 }
 
+/** A 1–10 score, one decimal. Color follows the tier band. */
+export function ScoreBadge({ score, size = "md" }: { score: number; size?: "sm" | "md" | "lg" }) {
+  const tone = score >= 7 ? "bg-basil text-white" : score >= 4 ? "bg-saffron-soft text-[#6b4800]" : "bg-crust text-ink-soft";
+  const dims = size === "lg" ? "h-14 min-w-14 text-2xl" : size === "sm" ? "h-6 min-w-9 text-[13px]" : "h-9 min-w-12 text-base";
+  return (
+    <span className={`inline-flex items-center justify-center rounded-full px-2 font-semibold tabular-nums ${tone} ${dims}`} aria-label={`Score ${score.toFixed(1)} out of 10`}>
+      {score.toFixed(1)}
+    </span>
+  );
+}
+
 export function Loading({ label = "Loading…" }: { label?: string }) {
   return (
     <div role="status" className="flex items-center gap-3 py-10 text-ink-soft">

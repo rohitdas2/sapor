@@ -1,10 +1,7 @@
 "use client";
 
-import { DemoControls } from "@/components/DemoControls";
-import { useStore } from "@/lib/data/provider";
 
 export default function AboutPage() {
-  const store = useStore();
   return (
     <div className="mx-auto max-w-2xl space-y-6 leading-relaxed">
       <h1 className="h-display text-3xl font-bold">About Sapor</h1>
@@ -26,9 +23,10 @@ export default function AboutPage() {
       <section>
         <h2 className="h-display text-xl font-semibold">How ranking works</h2>
         <p className="mt-1">
-          Sapor doesn&apos;t use star ratings. When you add something you tried to a ranking, it asks a few quick
-          &ldquo;which did you prefer?&rdquo; questions to find its spot. Ties are fine, and you can always skip or adjust by hand.
-          Each ranking is independent, so reordering one never touches another.
+          You never type a number. Tell Sapor whether you loved something, thought it was fine, or didn&apos;t like it, then
+          answer a few quick &ldquo;which did you prefer?&rdquo; questions. Its place among everything else you&apos;ve tried
+          becomes a 1–10 score (loved items land between 7.0 and 10.0, fine between 4.0 and 6.9, disliked between 1.0 and 3.9).
+          Your own rankings like &ldquo;Best desserts&rdquo; work the same way and never change each other.
         </p>
       </section>
 
@@ -38,22 +36,11 @@ export default function AboutPage() {
           <li>Your tried and want-to-try lists and your notes are private.</li>
           <li>Reviews and rankings are private until you choose to make them public.</li>
           <li>Community favorites come only from rankings people chose to make public.</li>
+          <li>Your scores count toward community averages only if you turn on &ldquo;Share my scores&rdquo; on your profile.</li>
+          <li>You can browse without an account. Saving, scoring, reviewing and commenting need one.</li>
         </ul>
       </section>
 
-      {store.mode === "local-demo" && (
-        <section className="rounded-3xl bg-crust p-5">
-          <h2 className="h-display text-xl font-semibold">You&apos;re using the local demo</h2>
-          <p className="mt-1">
-            Everything is saved in this browser&apos;s storage. Accounts aren&apos;t password-protected, shared links only open
-            in this browser, and clearing site data erases it all. The production version uses Supabase for real accounts, a
-            shared database with row-level security, and photo storage.
-          </p>
-          <div className="mt-4">
-            <DemoControls />
-          </div>
-        </section>
-      )}
     </div>
   );
 }

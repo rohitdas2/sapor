@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
-import { btn, categoryLabel, EmptyState, errMsg, ErrorState, input, Loading, ProductImage, useToast } from "@/components/ui";
+import { btn, categoryLabel, EmptyState, errMsg, ErrorState, input, Loading, ProductImage, ScoreBadge, useToast } from "@/components/ui";
 import { useQuery, useStore } from "@/lib/data/provider";
 import { CATEGORIES, type CategoryId, type Visibility } from "@/lib/types";
 
@@ -61,7 +61,7 @@ function TrackedList({ status }: { status: "tried" | "want_to_try" }) {
   const productById = useMemo(() => new Map((catalog.data ?? []).map((p) => [p.id, p])), [catalog.data]);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<CategoryId | "">("");
-  const [sort, setSort] = useState<"recent" | "name">("recent");
+  const [sort, setSort] = useState<"recent" | "score" | "name">(status === "tried" ? "score" : "recent");
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -72,7 +72,9 @@ function TrackedList({ status }: { status: "tried" | "want_to_try" }) {
       .sort((a, b) =>
         sort === "name"
           ? a.product.name.localeCompare(b.product.name)
-          : b.up.updatedAt.localeCompare(a.up.updatedAt),
+          : sort === "score"
+            ? (b.up.score ?? -1) - (a.up.score ?? -1)
+            : b.up.updatedAt.localeCompare(a.up.updatedAt),
       );
   }, [data, productById, status, q, category, sort]);
 
@@ -115,6 +117,7 @@ function TrackedList({ status }: { status: "tried" | "want_to_try" }) {
             Sort
           </label>
           <select id="my-sort" className={`${input} sm:w-36`} value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+            {status === "tried" && <option value="score">Score</option>}
             <option value="recent">Recent</option>
             <option value="name">A–Z</option>
           </select>
@@ -133,6 +136,7 @@ function TrackedList({ status }: { status: "tried" | "want_to_try" }) {
                   <span className="text-sm text-ink-soft">{categoryLabel(product.category)}</span>
                   {up.notes && <span className="block truncate text-xs text-ink-soft">🔒 {up.notes}</span>}
                 </span>
+                {up.score != null ? <ScoreBadge score={up.score} size="sm" /> : status === "tried" && <span className="text-xs text-ink-soft">Not scored</span>}
               </Link>
             </li>
           ))}

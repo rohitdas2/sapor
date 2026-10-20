@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useCurrentUserId, useQuery, useStore } from "@/lib/data/provider";
 import { rankNumbers } from "@/lib/ranking";
 import type { Product, UserProduct } from "@/lib/types";
-import { RankFlow } from "./RankFlow";
+import { RankFlow, ScoreFlow } from "./RankFlow";
 import { btn, errMsg, input, useToast } from "./ui";
 
 function useSignInRedirect() {
@@ -27,8 +26,10 @@ export function QuickTrack({ product, userProduct, compact }: { product: Product
     if (!userId) return toLogin();
     try {
       if (status === "tried" && target === "tried") {
-        // Never silently drop a rating/notes on a second tap; open details instead.
+        // Never silently drop a score/notes on a second tap; offer to (re)score instead.
         setSheetOpen(true);
+      } else if (status === "tried" && userProduct?.score != null && !confirm("Move back to Want to try? This removes your score.")) {
+        return;
       } else if (status === target) {
         await store.untrack(product.id);
         toast(target === "tried" ? "Removed from Tried" : "Removed from Want to try");
@@ -42,7 +43,7 @@ export function QuickTrack({ product, userProduct, compact }: { product: Product
     }
   }
 
-  const size = compact ? "min-h-11 px-3 text-sm whitespace-nowrap" : "min-h-12 px-5";
+  const size = compact ? "min-h-11 px-3 text-sm whitespace-nowrap" : "min-h-12 px-4 whitespace-nowrap";
   return (
     <>
       <div className={compact ? "flex flex-col gap-2 sm:flex-row" : "flex gap-2"}>
@@ -67,49 +68,8 @@ export function QuickTrack({ product, userProduct, compact }: { product: Product
           <span aria-hidden>✓</span> Tried
         </button>
       </div>
-      {sheetOpen && <TriedSheet product={product} onClose={() => setSheetOpen(false)} />}
+      {sheetOpen && <ScoreFlow product={product} onClose={() => setSheetOpen(false)} />}
     </>
-  );
-}
-
-/** Bottom sheet shown right after marking tried. Every field is optional. */
-export function TriedSheet({ product, onClose }: { product: Product; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    // No close() in cleanup: it would fire onClose during StrictMode's re-run.
-    if (ref.current && !ref.current.open) ref.current.showModal();
-  }, []);
-
-  return (
-    <dialog
-      ref={ref}
-      onClose={onClose}
-      aria-labelledby="tried-title"
-      className="m-0 mt-auto w-full max-w-none rounded-t-3xl bg-paper p-0 text-ink backdrop:bg-ink/40 md:m-auto md:max-w-md md:rounded-3xl"
-    >
-      <div className="max-h-[85vh] overflow-y-auto p-6">
-        <p className="text-sm font-semibold text-basil">✓ Marked as tried</p>
-        <h2 id="tried-title" className="h-display mt-1 text-2xl font-semibold">
-          {product.name}
-        </h2>
-        <p className="mt-1 text-sm text-ink-soft">Rank it now, or add notes and photos later. All optional.</p>
-
-        <div className="mt-5">
-          <p className="mb-2 text-sm font-semibold">Add to a ranking</p>
-          <CollectionPicker product={product} />
-        </div>
-
-        <div className="mt-6 flex flex-wrap gap-2">
-          <button type="button" className={btn.primary} onClick={() => ref.current?.close()}>
-            Done
-          </button>
-          <Link href={`/products/${product.slug}#review`} className={btn.secondary} onClick={() => ref.current?.close()}>
-            Write a review
-          </Link>
-        </div>
-      </div>
-    </dialog>
   );
 }
 

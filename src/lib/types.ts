@@ -1,5 +1,5 @@
-// Domain types. Catalog, personal tracking, rankings and public content are
-// deliberately separate shapes, mirroring the tables in supabase/migrations.
+// Domain types shared by the API and the UI. Catalog, personal tracking,
+// rankings and public content are separate shapes, mirroring db/migrations.
 
 export const CATEGORIES = [
   { id: "frozen-meals", label: "Frozen meals" },
@@ -50,14 +50,22 @@ export interface Profile {
   bio: string | null;
   pinnedCollectionId: string | null;
   isDemo: boolean;
+  /** Only present on your own profile. */
+  shareScores?: boolean;
   createdAt: string;
 }
 
-/** Private to its owner. No numeric ratings: opinions live in collection placements. */
+export type Tier = "loved" | "fine" | "disliked";
+
+/** Private to its owner. The 1–10 score is derived from tier + position (src/lib/scores.ts). */
 export interface UserProduct {
   userId: string;
   productId: string;
   status: TrackStatus;
+  tier: Tier | null;
+  tierPosition: number | null;
+  tiedWithPrev: boolean;
+  score: number | null;
   notes: string | null;
   firstTriedOn: string | null;
   createdAt: string;
@@ -130,6 +138,25 @@ export interface PublicReview extends Review {
 export interface CollectionWithItems extends Collection {
   owner: Profile;
   items: (CollectionItem & { product: Product })[];
+}
+
+export interface ScoreStats {
+  /** Average of scores from people who chose to share them. */
+  average: number | null;
+  count: number;
+}
+
+export interface Comment {
+  id: string;
+  author: Profile;
+  body: string;
+  createdAt: string;
+  parentId: string | null;
+}
+
+export interface TopRated {
+  product: Product;
+  stats: ScoreStats;
 }
 
 export interface CommunityPick {

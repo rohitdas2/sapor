@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { DemoControls } from "@/components/DemoControls";
 import { Feed, FeedEmpty } from "@/components/Feed";
 import { ProductCard } from "@/components/ProductCard";
-import { EmptyState, ErrorState, input, Loading } from "@/components/ui";
+import { EmptyState, ErrorState, input, Loading, ScoreBadge } from "@/components/ui";
 import { useQuery } from "@/lib/data/provider";
 import { CATEGORIES, type CategoryId } from "@/lib/types";
 
@@ -17,8 +16,10 @@ export default function DiscoverPage() {
 
   const products = useQuery((s) => s.listProducts({ q, category }), [q, category]);
   const mine = useQuery((s) => s.myUserProducts(), []);
-  const newest = useQuery((s) => s.newAdditions(6), []);
-  const favorites = useQuery((s) => s.communityFavorites(6), []);
+  const discover = useQuery((s) => s.discover(), []);
+  const favorites = { data: discover.data?.favorites, loading: discover.loading };
+  const newest = { data: discover.data?.newAdditions };
+  const topRated = discover.data?.topRated ?? [];
   const byId = useMemo(() => new Map((mine.data ?? []).map((u) => [u.productId, u])), [mine.data]);
 
   return (
@@ -76,6 +77,25 @@ export default function DiscoverPage() {
             )}
           </Section>
 
+          {topRated.length > 0 && (
+            <Section title="Top rated" note="Average score from people who share their scores, with at least two scores each.">
+              <Grid>
+                {topRated.map(({ product, stats }) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    userProduct={byId.get(product.id) ?? null}
+                    extra={
+                      <p className="mt-1 text-sm text-ink-soft">
+                        <ScoreBadge score={stats.average!} size="sm" /> from {stats.count} people
+                      </p>
+                    }
+                  />
+                ))}
+              </Grid>
+            </Section>
+          )}
+
           <div id="community" className="scroll-mt-20">
             <Section title="From the community" note="Public reviews and shared rankings, newest first.">
               <Feed
@@ -83,9 +103,6 @@ export default function DiscoverPage() {
                 empty={
                   <FeedEmpty>
                     When people publish a review or make a ranking public, it shows up here. Nothing here is invented.
-                    <div className="mt-4">
-                      <DemoControls />
-                    </div>
                   </FeedEmpty>
                 }
               />
