@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local database + uploads
 /data/
+
+# internal architecture docs (kept local, not published)
+/docs/architecture/
